@@ -7,7 +7,7 @@ from numpy.linalg import inv
 # data column lookup
 c = {key: i for i, key in enumerate(['Lap','Elapsed Time (ms)','Speed (MPH)','Latitude (decimal)','Longitude (decimal)','Lateral Acceleration (m/s^2)','Longitudinal Acceleration (m/s^2)','Throttle Position (%)','Brake Pressure (bar)','Steering Angle (deg)','Steering Angle Rate (deg/s)','Yaw Rate (rad/s)','Power Level (KW)','State of Charge (%)','Tire Pressure Front Left (bar)','Tire Pressure Front Right (bar)','Tire Pressure Rear Left (bar)','Tire Pressure Rear Right (bar)','Brake Temperature Front Left (% est.)','Brake Temperature Front Right (% est.)','Brake Temperature Rear Left (% est.)','Brake Temperature Rear Right (% est.)','Front Inverter Temp (%)','Rear Inverter Temp (%)','Battery Temp (%)','Tire Slip Front Left (% est.)','Tire Slip Front Right (% est.)','Tire Slip Rear Left (% est.)','Tire Slip Rear Right (% est.)'])}
 # state column lookup
-s = {key: i for i, key in enumerate(['x','y','z','t'])}
+s = {key: i for i, key in enumerate(['x','y','t','xd','yd'])}
 state_dims = len(s)
 
 def convert_gps_to_xy(lat_gps, lon_gps, lat_origin, lon_origin):
@@ -50,8 +50,8 @@ def main():
     data_vars = np.std(data[:, -100:], axis=1)
     print(', '.join([f'{list(c.keys())[list(c.values()).index(i)]}:{data_vars[i]:.2f}' for i in range(data_vars.size)]))
 
-    # run ekf
-    if False: #for i, measurement in enumerate(data.transpose()):
+    # run ukf
+    for i, measurement in enumerate(data.transpose()):
         # prediction step
         control_vector = np.array([measurement[c['u']], measurement[c['l']], measurement[c['r']]])
 
