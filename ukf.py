@@ -80,7 +80,7 @@ class UKFBaseType:
     def regroupSigmaPoints(self, dt, sigma_points_pred, u_t, R_t):
         # state prediction
         weights = self.getWeights()
-        state_pred = [[0] for _ in range(self.nDOF)]
+        state_pred = np.zeros((self.nDOF))
         for i in range(2 * self.nDOF + 1):
             state_pred = state_pred + weights[i] * sigma_points_pred[i]
             
@@ -101,13 +101,13 @@ class UKFBaseType:
         Z_t_pred = []
         for sigma_pt in sigma_points:
             z_t = self.get_z_pred(sigma_pt)
-            Z_t_pred = Z_t_pred + [z_t]
-        return Z_t_pred
+            Z_t_pred.append(z_t)
+        return np.array(Z_t_pred)
     
     def correctionStep(self, state_pred, sigma_pred, sigma_points_pred, z_t, Q_t):
         Z_t_pred = self.getPredictedMeasurements(sigma_points_pred)
         weights = self.getWeights()
-        z_t_pred = [[0] for _ in self.nMeas]
+        z_t_pred = [[0] for _ in range(self.nMeas)]
         for i in range(2*self.nDOF+1):
             z_t_pred = z_t_pred + weights[i] * Z_t_pred[i]
         
