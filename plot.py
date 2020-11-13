@@ -65,6 +65,7 @@ prev_states_gps = np.zeros((state_dims, num_samples))
 prev_variances_gps = np.zeros((state_dims, state_dims, num_samples))
 prev_states_no_gps = np.zeros((state_dims, num_samples))
 prev_variances_no_gps = np.zeros((state_dims, state_dims, num_samples))
+integratedTheta = np.zeros((num_samples))
 
 # print('Variances of last 100 points:')
 # data_vars = np.std(data[:, -100:], axis=1)
@@ -78,10 +79,10 @@ ukfNoGPS = UKFWithoutGPSType(N_DOF, N_CONTROL, N_MEAS_NO_GPS)
 for i, measurement in enumerate(data.transpose()):
     # calculate control input
     a_f = measurement[c['Longitudinal Acceleration (m/s^2)']] # m/s^2
-    a_r = measurement[c['Lateral Acceleration (m/s^2)']]      # m/s^2
+    a_r = -1 * measurement[c['Lateral Acceleration (m/s^2)']]      # m/s^2
     thetaDot = -1 * measurement[c['Yaw Rate (rad/s)']]        # rad/s
     u_t = np.array([[a_f], [a_r], [thetaDot]])
-    R_t = np.diag([0.207010**2, 0.028324**2, 0.000545586**2])
+    R_t = np.diag([0.023481**2, 0.027114**2, 0.000545586**2])
     
     # calculate measurement input
     v_f = mphToMps(measurement[c['Speed (MPH)']])
@@ -94,10 +95,13 @@ for i, measurement in enumerate(data.transpose()):
     z_t_no_gps = z_t[:-2]
     Q_t_no_gps = Q_t[:-2]
     
-    # call both EKF versions on this data
+    # get time delta
     deltaT = measurement[c['Elapsed Time (ms)']]
     if(not(i == 0 or measurement[c['Lap']] != data[c['Lap']][i-1])):
         deltaT -= data[c['Elapsed Time (ms)']][i-1]
+    deltaT = deltaT / 1000 # from ms to seconds
+    
+    # call both EKF versions on this data
     ukfWithGPS.localize(deltaT, u_t, R_t, z_t, Q_t)
     # ukfNoGPS.localize(deltaT, u_t, R_t, z_t_no_gps, Q_t_no_gps)
     
@@ -115,6 +119,10 @@ for i, measurement in enumerate(data.transpose()):
     prev_variances_gps[:,:,i] = gps_sigma
     prev_states_no_gps[:,i] = np.squeeze(no_gps_state)
     prev_variances_no_gps[:,:,i] = no_gps_sigma
+    if(i == 0):
+        integratedTheta[i] = 0
+    else:
+        integratedTheta[i] = wrap_to_pi(integratedTheta[i-1] + thetaDot*deltaT)
 
 # Plot data
 points =  np.array([gps_x_all, gps_y_all])
@@ -135,6 +143,7 @@ line2, = ax2.plot(data[c['Elapsed Time (ms)']], prev_states_gps[THETA_INDEX, :],
 
 gps0,  = ax0.plot(data[c['Elapsed Time (ms)']], gps_x_all, color='r')
 gps1,  = ax1.plot(data[c['Elapsed Time (ms)']], gps_y_all, color='r')
+gps2,  = ax2.plot(data[c['Elapsed Time (ms)']], integratedTheta, color='r')
 
 # line3, = ax3.plot(TIMES, errors, color='b')
 # line3gps, = ax3.plot(TIMES, gps_est_err, color='g')

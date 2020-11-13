@@ -53,7 +53,7 @@ origin = [data[c['Latitude (decimal)']][0], data[c['Longitude (decimal)']][0]]
 #data_vars = np.std(data[:, :100], axis=1)
 #print(', '.join([f'{list(c.keys())[list(c.values()).index(i)]}:{data_vars[i]:.8f}' for i in range(data_vars.size)]))
 
-mu, std = norm.fit(data[c['Yaw Rate (rad/s)']][0:250])
+mu, std = norm.fit(data[c['Lateral Acceleration (m/s^2)']][0:200])
 print("mu = " + str(mu))
 print("std = " + str(std))
 
