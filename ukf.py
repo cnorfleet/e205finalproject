@@ -48,14 +48,14 @@ class UKFBaseType:
             diff = (sqrtm(mat))[i]
             diff = np.array(diff)
             sigma_pt = state + [[diff[i]] for i in range(nDOF)]
-            sigma_1_n = sigma_1_n + [sigma_pt]
+            sigma_1_n.append(sigma_pt)
         sigma_nplus1_2n = []
         for j in range(nDOF):
             i = j + nDOF
             diff = (sqrtm((nDOF + scaling_factor) * sigma_matrix))[i-nDOF]
             diff = np.array(diff)
             sigma_pt = state - [[diff[i]] for i in range(nDOF)]
-            sigma_nplus1_2n = sigma_nplus1_2n + [sigma_pt]
+            sigma_nplus1_2n.append(sigma_pt)
         return [sigma_0] + sigma_1_n + sigma_nplus1_2n
     
     def getWeights(self):
@@ -80,7 +80,7 @@ class UKFBaseType:
     def regroupSigmaPoints(self, dt, sigma_points_pred, u_t, R_t):
         # state prediction
         weights = self.getWeights()
-        state_pred = np.zeros((self.nDOF))
+        state_pred = np.zeros((self.nDOF,1))
         for i in range(2 * self.nDOF + 1):
             state_pred = state_pred + weights[i] * sigma_points_pred[i]
             
@@ -140,7 +140,7 @@ class UKFBaseType:
         return sigma_points_pred
 
     def applyMotionModelSingle(self, dt, sigma_pt, u_t):
-        pt = np.zeros((5))
+        pt = np.zeros((5,1))
         pt[X_INDEX]     = sigma_pt[X_INDEX] + sigma_pt[XDOT_INDEX] * dt
         pt[Y_INDEX]     = sigma_pt[Y_INDEX] + sigma_pt[YDOT_INDEX] * dt
         pt[THETA_INDEX] = wrap_to_pi(sigma_pt[THETA_INDEX] + u_t[THETADOT_INPUT_INDEX] * dt)
