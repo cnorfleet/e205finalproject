@@ -43,6 +43,7 @@ class UKFBaseType:
     def getSigmaPoints(state, sigma_matrix, nDOF, scaling_factor):
         sigma_0 = state
         sigma_1_n = []
+        sigma_nplus1_2n = []
         for i in range(nDOF):
             mat = (nDOF + scaling_factor) * np.array(sigma_matrix)
             diff = (sqrtm(mat))[i]

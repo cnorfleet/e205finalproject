@@ -37,6 +37,7 @@ c = {key: i for i, key in enumerate(['Lap',
                                      'Tire Slip Front Right (% est.)',
                                      'Tire Slip Rear Left (% est.)',
                                      'Tire Slip Rear Right (% est.)'])}
+
 # state column lookup
 s = {key: i for i, key in enumerate(['x','y','t','xd','yd'])}
 state_dims = len(s)
