@@ -74,7 +74,7 @@ class UKFBaseType:
                          [sin(state_est[THETA_INDEX]) * dt, -1 * cos(state_est[THETA_INDEX]) * dt, 0]]))
     
     def get_G_u_t(self, dt, state_est, u_t):
-        manual = self.get_G_u_t_manual(dt, state_est, u_t)
+        # manual = self.get_G_u_t_manual(dt, state_est, u_t)
         auto = diff_function(self.applyMotionModelSingle, [dt, state_est, u_t], param=2)
         return auto
 

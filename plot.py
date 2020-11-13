@@ -1,10 +1,8 @@
-import csv
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 from numpy.linalg import inv
 
-from ukf import wrap_to_pi, UKFType, UKFWithoutGPSType, N_DOF, N_CONTROL, N_MEAS, N_MEAS_NO_GPS
+from ukf import wrap_to_pi, UKFType, UKFWithoutGPSType, N_DOF, N_CONTROL, N_MEAS, N_MEAS_NO_GPS, X_INDEX, Y_INDEX, THETA_INDEX
 from ukf import *
 
 # data column lookup
@@ -50,6 +48,9 @@ def convert_gps_to_xy(lat_gps, lon_gps, lat_origin, lon_origin):
 
     return (x_gps, y_gps)
 
+def mphToMps(mph):
+    return 0.447 * mph
+
 # load data
 data = np.genfromtxt("Data/telemetry-v1-2020-03-10-13_50_14.csv", delimiter=",")[270:4300].transpose()
 origin = [data[c['Latitude (decimal)']][0], data[c['Longitude (decimal)']][0]]
@@ -80,14 +81,14 @@ for i, measurement in enumerate(data.transpose()):
     a_r = measurement[c['Lateral Acceleration (m/s^2)']]      # m/s^2
     thetaDot = -1 * measurement[c['Yaw Rate (rad/s)']]        # rad/s
     u_t = np.array([[a_f], [a_r], [thetaDot]])
-    R_t = np.diag([1**2, 1**2, 1**2])   # u_t variance, from last 100 points # TODO: make these values right
+    R_t = np.diag([0.207010**2, 0.028324**2, 0.000545586**2])   # u_t variance, from last 100 points # TODO: make these values right
     
     # calculate measurement input
-    v_f = measurement[c['Speed (MPH)']]
+    v_f = mphToMps(measurement[c['Speed (MPH)']])
     gps_x = gps_x_all[i]
     gps_y = gps_y_all[i]
     z_t = np.array([[v_f], [gps_x], [gps_y]])
-    Q_t = np.diag([1**2, 1**2, 1**2]) # TODO: aaaa
+    Q_t = np.diag([(mphToMps(1))**2, 0.09326**2, 0.11132**2]) # TODO: aaaa
     
     # measurement input w/o GPS
     z_t_no_gps = z_t[:-2]
@@ -98,7 +99,7 @@ for i, measurement in enumerate(data.transpose()):
     if(not(i == 0 or measurement[c['Lap']] != data[c['Lap']][i-1])):
         deltaT -= data[c['Elapsed Time (ms)']][i-1]
     ukfWithGPS.localize(deltaT, u_t, R_t, z_t, Q_t)
-    ukfNoGPS.localize(deltaT, u_t, R_t, z_t_no_gps, Q_t_no_gps)
+    # ukfNoGPS.localize(deltaT, u_t, R_t, z_t_no_gps, Q_t_no_gps)
     
     # get state and variance
     gps_state = ukfWithGPS.state_est
@@ -124,20 +125,42 @@ plt.ylabel('Y Position (m)')
 plt.title('GPS Position')
 
 plt.figure(2)
-plt.plot(data[c['Yaw Rate (rad/s)']], data[c['Steering Angle (deg)']]*data[c['Speed (MPH)']])
+plt.plot(prev_states_gps[X_INDEX], prev_states_gps[Y_INDEX])
 
-fig, ax1 = plt.subplots()
+# show x, y, theta values
+f, (ax0, ax1, ax2, ax3) = plt.subplots(4, 1, sharex = True)
+line0, = ax0.plot(data[c['Elapsed Time (ms)']], prev_states_gps[X_INDEX, :], color='b')
+line1, = ax1.plot(data[c['Elapsed Time (ms)']], prev_states_gps[Y_INDEX, :], color='b')
+line2, = ax2.plot(data[c['Elapsed Time (ms)']], prev_states_gps[THETA_INDEX, :], color='b')
 
-ax1.set_xlabel('Elapsed Time (ms)')
-ax1.set_ylabel('Steering Angle (deg)', color='tab:blue')
-ax1.plot(data[c['Elapsed Time (ms)']], data[c['Steering Angle (deg)']])
+gps0,  = ax0.plot(data[c['Elapsed Time (ms)']], gps_x_all, color='r')
+gps1,  = ax1.plot(data[c['Elapsed Time (ms)']], gps_y_all, color='r')
 
-ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+# line3, = ax3.plot(TIMES, errors, color='b')
+# line3gps, = ax3.plot(TIMES, gps_est_err, color='g')
+# ax3.legend((line3, line3gps), ('EKF Error', 'Measurement Model Only Error', 'GPS Error'), loc='upper right')
 
-color = 'tab:red'
-ax2.set_ylabel('Power Level (KW)', color=color)  # we already handled the x-label with ax1
-ax2.plot(data[c['Elapsed Time (ms)']], data[c['Power Level (KW)']], color=color)
-plt.title('Steering and Power Data')
+ax0.grid(True)
+ax1.grid(True)
+ax2.grid(True)
+ax3.grid(True)
 
-fig.tight_layout()  # otherwise the right y-label is slightly clipped
+ax3.set_xlabel("Time (seconds)")
+ax0.set_ylabel("X Location (meters)")
+ax1.set_ylabel("Y Location (meters)")
+ax2.set_ylabel("Theta (radians)")
+ax3.set_ylabel("Particle Filter Pos Error (m)")
+plt.setp(ax0.get_xticklabels(), visible=False)
+
+#fig, ax1 = plt.subplots()
+#ax1.set_xlabel('Elapsed Time (ms)')
+#ax1.set_ylabel('Steering Angle (deg)', color='tab:blue')
+#ax1.plot(data[c['Elapsed Time (ms)']], data[c['Steering Angle (deg)']])
+#ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+#color = 'tab:red'
+#ax2.set_ylabel('Power Level (KW)', color=color)  # we already handled the x-label with ax1
+#ax2.plot(data[c['Elapsed Time (ms)']], data[c['Power Level (KW)']], color=color)
+#plt.title('Steering and Power Data')
+#fig.tight_layout()  # otherwise the right y-label is slightly clipped
+
 plt.show()
