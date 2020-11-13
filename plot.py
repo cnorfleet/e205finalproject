@@ -162,7 +162,7 @@ line2m, = ax2.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_minus3sd[T
 
 gps0,   = ax0.plot(data[c['Elapsed Time (ms)']]/1000, gps_x_all, color='g')
 gps1,   = ax1.plot(data[c['Elapsed Time (ms)']]/1000, gps_y_all, color='g')
-gps2,   = ax2.plot(data[c['Elapsed Time (ms)']]/1000, integratedTheta, color='g')
+# gps2,   = ax2.plot(data[c['Elapsed Time (ms)']]/1000, integratedTheta, color='g')
 
 # line3, = ax3.plot(TIMES, errors, color='b')
 # line3gps, = ax3.plot(TIMES, gps_est_err, color='g')
