@@ -80,7 +80,7 @@ for i, measurement in enumerate(data.transpose()):
     # calculate control input
     a_f = measurement[c['Longitudinal Acceleration (m/s^2)']] # m/s^2
     a_r = -1 * measurement[c['Lateral Acceleration (m/s^2)']]      # m/s^2
-    thetaDot = -1 * measurement[c['Yaw Rate (rad/s)']]        # rad/s
+    thetaDot = measurement[c['Yaw Rate (rad/s)']]        # rad/s
     u_t = np.array([[a_f], [a_r], [thetaDot]])
     R_t = np.diag([0.023481**2, 0.027114**2, 0.000545586**2])
     
