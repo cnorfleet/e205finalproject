@@ -19,6 +19,7 @@ VF_MEAS_INDEX = 0
 GPS_X_MEAS_INDEX = 1
 GPS_Y_MEAS_INDEX = 2
 N_MEAS = 3
+N_MEAS_NO_GPS = 1
 
 def wrap_to_pi(angle):
     while angle > math.pi:
@@ -28,7 +29,9 @@ def wrap_to_pi(angle):
     return angle
 
 class UKFBaseType:
-    def __init__(self, nDOF, nControl, nMeas, scaling_factor = nDOF-3):
+    def __init__(self, nDOF, nControl, nMeas, scaling_factor = None):
+        if(scaling_factor == None):
+            scaling_factor = nDOF - 3
         self.nDOF = nDOF
         self.nControl = nControl
         self.nMeas = nMeas
@@ -63,7 +66,7 @@ class UKFBaseType:
     def regroupSigmaPoints(self, sigma_points_pred, u_t, R_t):
         # state prediction
         weights = self.getWeights()
-        state_pred = [[0] for _ in self.nDOF]
+        state_pred = [[0] for _ in range(self.nDOF)]
         for i in range(2 * self.nDOF + 1):
             state_pred = state_pred + weights[i] * sigma_points_pred[i]
             
@@ -115,16 +118,15 @@ class UKFBaseType:
 class UKFType(UKFBaseType):
     def applyMotionModel(sigma_points, u_t):
         # predict next state for each sigma point
-        
-        
         sigma_points_pred = []
         for sigma_pt in sigma_points:
             x = sigma_pt[0, 0]
             y = sigma_pt[1, 0]
             theta = sigma_pt[2, 0]
             
-            deltaX = deltaS * np.cos(theta + deltaTheta / 2)
-            deltaY = deltaS * np.sin(theta + deltaTheta / 2)
+            deltaX = 0
+            deltaY = 0
+            deltaTheta = 0
             
             x_pred = x + deltaX
             y_pred = y + deltaY
@@ -136,20 +138,12 @@ class UKFType(UKFBaseType):
             sigma_points_pred = sigma_points_pred + [state_pred]
         return sigma_points_pred
         
-    def localize(self, a_f, a_r, thetaDot, v_f, gps_x, gps_y):
-        # control input
-        u_t = np.matrix([[a_f], [a_r], [thetaDot]])
-        R_t = np.diag([1**2, 1**2, 1**2]) # TODO: aaaa
-    
+    def localize(self, u_t, R_t, z_t, Q_t):
         # prediction step using sigma points
         sigma_points = UKFType.getSigmaPoints(self.state_est, self.sigma_est, self.nDOF, self.scaling_factor)
         sigma_points_model = UKFType.applyMotionModel(sigma_points, u_t)
         (state_pred, sigma_pred) = self.regroupSigmaPoints(sigma_points_model, u_t, R_t)
         sigma_points_pred = UKFType.getSigmaPoints(state_pred, sigma_pred, self.nDOF, self.scaling_factor)
-        
-        # measurement
-        z_t = np.matrix([[v_f], [gps_x], [gps_y]])
-        Q_t = np.diag([1**2, 1**2, 1**2])
         
         # correction step
         outputs = self.correctionStep(state_pred, sigma_pred, sigma_points_pred, z_t, Q_t)
@@ -162,20 +156,12 @@ class UKFWithoutGPSType(UKFBaseType):
         # TODO: aaa
         pass
     
-    def localize(self, a_f, a_r, thetaDot, v_f):
-        # control input
-        u_t = np.matrix([[a_f], [a_r], [thetaDot]])
-        R_t = np.diag([1**2, 1**2, 1**2]) # TODO: aaaa
-    
+    def localize(self, u_t, R_t, z_t, Q_t):
         # prediction step using sigma points
         sigma_points = UKFType.getSigmaPoints(self.state_est, self.sigma_est, self.nDOF, self.scaling_factor)
         sigma_points_model = UKFType.applyMotionModel(sigma_points, u_t)
         (state_pred, sigma_pred) = self.regroupSigmaPoints(sigma_points_model, u_t, R_t)
         sigma_points_pred = UKFType.getSigmaPoints(state_pred, sigma_pred, self.nDOF, self.scaling_factor)
-        
-        # measurement
-        z_t = np.matrix([[v_f]])
-        Q_t = np.diag([1**2])
         
         # correction step
         outputs = self.correctionStep(state_pred, sigma_pred, sigma_points_pred, z_t, Q_t)

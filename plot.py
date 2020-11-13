@@ -4,6 +4,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import numpy as np
 from numpy.linalg import inv
 
+from ukf import wrap_to_pi, UKFType, UKFWithoutGPSType, N_DOF, N_CONTROL, N_MEAS, N_MEAS_NO_GPS
 from ukf import *
 
 # data column lookup
@@ -46,7 +47,7 @@ def convert_gps_to_xy(lat_gps, lon_gps, lat_origin, lon_origin):
     x_gps = EARTH_RADIUS*(np.pi/180.)*(lon_gps - lon_origin)*np.cos((np.pi/180.)*lat_origin)
     y_gps = EARTH_RADIUS*(np.pi/180.)*(lat_gps - lat_origin)
 
-    return np.array([x_gps, y_gps])
+    return (x_gps, y_gps)
 
 def measure(m):
     """Convert CSV to measurement."""
@@ -61,19 +62,24 @@ def sensor_model(x):
 data = np.genfromtxt("Data/telemetry-v1-2020-03-10-13_50_14.csv", delimiter=",")[270:4300].transpose()
 origin = [data[c['Latitude (decimal)']][0], data[c['Longitude (decimal)']][0]]
 print(origin)
-xy = convert_gps_to_xy(data[c['Latitude (decimal)']], data[c['Longitude (decimal)']], origin[0], origin[1])
+(gps_x_all, gps_y_all) = convert_gps_to_xy(data[c['Latitude (decimal)']], data[c['Longitude (decimal)']], origin[0], origin[1])
 
 state = np.zeros((state_dims, 1))
 sigma = np.identity(state_dims)
 
 num_samples = data.shape[1]
-prev_states = np.zeros((state_dims, num_samples))
-prev_variances = np.zeros((state_dims, state_dims, num_samples))
-prev_corrections = np.zeros((state_dims, num_samples))
+prev_states_gps = np.zeros((state_dims, num_samples))
+prev_variances_gps = np.zeros((state_dims, state_dims, num_samples))
+prev_states_no_gps = np.zeros((state_dims, num_samples))
+prev_variances_no_gps = np.zeros((state_dims, state_dims, num_samples))
 
 # print('Variances of last 100 points:')
 # data_vars = np.std(data[:, -100:], axis=1)
 # print(', '.join([f'{list(c.keys())[list(c.values()).index(i)]}:{data_vars[i]:.2f}' for i in range(data_vars.size)]))
+
+# instantiate UKFs
+ukfWithGPS = UKFType(N_DOF, N_CONTROL, N_MEAS)
+ukfNoGPS = UKFWithoutGPSType(N_DOF, N_CONTROL, N_MEAS_NO_GPS)
 
 # run ukf
 for i, measurement in enumerate(data.transpose()):
@@ -86,49 +92,36 @@ for i, measurement in enumerate(data.transpose()):
     
     # calculate measurement input
     v_f = measurement[c['Speed (MPH)']]
-    gps_x = 0
-    gps_y= 0
+    gps_x = gps_x_all[i]
+    gps_y = gps_y_all[i]
     z_t = np.matrix([[v_f], [gps_x], [gps_y]])
-    Q_t = np.diag([1**2, 1**2, 1**2])
+    Q_t = np.diag([1**2, 1**2, 1**2]) # TODO: aaaa
     
-    #x_bar = propogate_state(state, control_vector)
-
-    # Call our derivative function to differentiate the sensor model
-    # Take derivative of state update with respect to previous state
-    G_x_t = diff_function([x, control_vector], propogate_state, param=0)
-    # Take derivative of state update with respect to control input
-    G_u_t = diff_function([x, control_vector], propogate_state, param=1)
-
-    # update EKF sigma
-    sigma_bar = G_x_t @ sigma @ G_x_t.transpose() + \
-                G_u_t @ control_vector_sigma @ G_u_t.transpose()
-
-    # correction step
-    # differentiate sensor model
-    h_t = diff_function([x], sensor_model, param=0)
-    sensor_sigma = np.diag([0.8, 0.8, 0.8, 0.1])   # from last 100 points
-    z_t = measure(measurement)
-
-    # calculate Kalman gain
-    k_t = sigma_bar @ h_t.transpose()@inv(h_t@sigma_bar@h_t.transpose()+sensor_sigma)
-    error = z_t - sensor_model(x_bar)
-    error[3] = angle_wrap(error[3])
-
-    correction = k_t.dot(error)
-    x_est = x_bar + correction
-    x_est[s['t']] = angle_wrap(x_est[s['t']])
-
-    sigma_est = (np.identity(k_t.shape[0])-k_t.dot(h_t)).dot(sigma_bar)
+    # measurement input w/o GPS
+    z_t_no_gps = z_t[:-2]
+    Q_t_no_gps = Q_t[:-2]
+    
+    # call both EKF versions on this data
+    ukfWithGPS.localize(u_t, R_t, z_t, Q_t)
+    ukfNoGPS.localize(u_t, R_t, z_t_no_gps, Q_t_no_gps)
+    
+    # get state and variance
+    gps_state = ukfWithGPS.state_est
+    gps_sigma = ukfWithGPS.sigma_est
+    no_gps_state = ukfNoGPS.state_est
+    no_gps_sigma = ukfNoGPS.sigma_est
+    
+    # update state of without gps ukf to match the ukf with gps unless we're in a simulated gps blackout
+    # TODO: aaa
     
     # update variables
-    x = x_est
-    sigma = sigma_est
-    prev_states[:,i] = np.squeeze(x)
-    prev_corrections[:,i] = np.squeeze(correction)
-    prev_variances[:,:,i] = sigma
+    prev_states_gps[:,i] = np.squeeze(gps_state)
+    prev_variances_gps[:,:,i] = gps_sigma
+    prev_states_no_gps[:,i] = np.squeeze(no_gps_state)
+    prev_variances_no_gps[:,:,i] = no_gps_sigma
 
 # Plot data
-points = xy
+points =  np.array([gps_x_all, gps_y_all])
 plt.figure(1)
 plt.plot(points[0], points[1])
 print(xy)
