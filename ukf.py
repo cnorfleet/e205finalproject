@@ -93,7 +93,10 @@ class UKFBaseType:
         sigma_pred = sigma_pred + G_u_t @ R_t @ G_u_t.T
             
         return (state_pred, sigma_pred)
-    
+
+    def get_z_pred(self, sigma_pt):
+        return np.array([sigma_pt[X_INDEX], sigma_pt[Y_INDEX], sigma_pt[XDOT_INDEX]*np.cos(np.squeeze(sigma_pt[THETA_INDEX])) +
+                                                               sigma_pt[YDOT_INDEX]*np.sin(np.squeeze(sigma_pt[THETA_INDEX]))])
     def getPredictedMeasurements(self, sigma_points):
         Z_t_pred = []
         for sigma_pt in sigma_points:
