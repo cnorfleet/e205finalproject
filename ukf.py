@@ -43,20 +43,13 @@ class UKFBaseType:
         self.scaling_factor = scaling_factor # lambda scaling factor
         
     def getSigmaPoints(state, sigma_matrix, nDOF, scaling_factor):
-        sigma_0 = state
-        sigma_1_n = []
-        sigma_nplus1_2n = []
-        sigma_nplus1_2n = []
+        sigmaPts = np.zeros((1+nDOF*2, nDOF, 1))
+        sigmaPts[0] = state
         for i in range(nDOF):
             diff = (sqrtm((nDOF + scaling_factor) * sigma_matrix))[i]
-            sigma_pt = state + [[diff[i]] for i in range(nDOF)]
-            sigma_1_n.append(sigma_pt)
-        for j in range(nDOF):
-            i = j + nDOF
-            diff = (sqrtm((nDOF + scaling_factor) * sigma_matrix))[i-nDOF]
-            sigma_pt = state - [[diff[i]] for i in range(nDOF)]
-            sigma_nplus1_2n.append(sigma_pt)
-        return [sigma_0] + sigma_1_n + sigma_nplus1_2n
+            sigmaPts[i+1]      = (state + [[diff[j]] for j in range(nDOF)])
+            sigmaPts[i+1+nDOF] = (state - [[diff[j]] for j in range(nDOF)])
+        return sigmaPts
     
     def getWeights(self):
         # weights for the regrouping algorithm.  note that the sum of all weights is 1
@@ -95,10 +88,10 @@ class UKFBaseType:
         return (state_pred, sigma_pred)
 
     def get_z_pred(self, sigma_pt):
-        return np.array([[sigma_pt[X_INDEX, 0]],
-                         [sigma_pt[Y_INDEX, 0]],
-                         [sigma_pt[XDOT_INDEX, 0] * cos(sigma_pt[THETA_INDEX, 0]) +
-                          sigma_pt[YDOT_INDEX, 0] * sin(sigma_pt[THETA_INDEX, 0])]])
+        return np.array([[sigma_pt[XDOT_INDEX, 0] * cos(sigma_pt[THETA_INDEX, 0]) +
+                          sigma_pt[YDOT_INDEX, 0] * sin(sigma_pt[THETA_INDEX, 0])],
+                         [sigma_pt[X_INDEX, 0]],
+                         [sigma_pt[Y_INDEX, 0]]])
     
     def getPredictedMeasurements(self, sigma_points):
         Z_t_pred = []
