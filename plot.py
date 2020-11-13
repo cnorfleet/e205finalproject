@@ -98,7 +98,7 @@ for i, measurement in enumerate(data.transpose()):
     if(not(i == 0 or measurement[c['Lap']] != data[c['Lap']][i-1])):
         deltaT -= data[c['Elapsed Time (ms)']][i-1]
     ukfWithGPS.localize(deltaT, u_t, R_t, z_t, Q_t)
-    ukfNoGPS.localize(deltaT, u_t, R_t, z_t_no_gps, Q_t_no_gps)
+    #ukfNoGPS.localize(deltaT, u_t, R_t, z_t_no_gps, Q_t_no_gps)
     
     # get state and variance
     gps_state = ukfWithGPS.state_est
