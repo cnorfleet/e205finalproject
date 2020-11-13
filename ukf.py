@@ -119,7 +119,6 @@ class UKFBaseType:
         
         K_t = sigma_x_z_t @ np.linalg.inv(S_t)
         state_est = state_pred + K_t @ (z_t - z_t_pred)
-        # TODO: move all wrapping to pi to a separate function
         state_est[THETA_INDEX, 0] = wrap_to_pi(state_est[THETA_INDEX, 0]) # clip theta
         sigma_est = sigma_pred - (K_t @ S_t @ K_t.T)
         
@@ -130,7 +129,7 @@ class UKFBaseType:
         # predict next state for each sigma point
         sigma_points_pred = []
         for sigma_pt in sigma_points:
-            pt = self.applyMotionModelSingle(dt, sigma_points, u_t)
+            pt = self.applyMotionModelSingle(dt, sigma_pt, u_t)
             sigma_points_pred.append(pt)
         return sigma_points_pred
 
@@ -171,7 +170,7 @@ class UKFWithoutGPSType(UKFBaseType):
         
         return outputs
 
-def diff_function(func, params, param=0):
+def diff_function(func, params, param = 0):
     """Takes derivative of Python function func at location params about parameter param.
 
     I didn't want to take derivatives, so I spent far longer working on this function than if I had just taken them. I
