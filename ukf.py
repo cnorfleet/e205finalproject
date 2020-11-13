@@ -115,11 +115,7 @@ class UKFBaseType:
 class UKFType(UKFBaseType):
     def applyMotionModel(sigma_points, u_t):
         # predict next state for each sigma point
-        deltaSLeft = u_t[0, 0]
-        deltaSRight = u_t[1, 0]
         
-        deltaS = (deltaSRight + deltaSLeft) / 2
-        deltaTheta = (deltaSRight - deltaSLeft) / EgoType.W
         
         sigma_points_pred = []
         for sigma_pt in sigma_points:
