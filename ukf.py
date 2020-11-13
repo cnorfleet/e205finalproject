@@ -23,9 +23,9 @@ N_MEAS = 3
 N_MEAS_NO_GPS = 1
 
 def wrap_to_pi(angle):
-    while angle > math.pi:
+    while angle >= math.pi:
         angle -= 2*math.pi
-    while angle <= -math.pi:
+    while angle < -math.pi:
         angle += 2*math.pi
     return angle
 
@@ -67,16 +67,16 @@ class UKFBaseType:
         return weights
     
     def get_G_u_t_manual(self, dt, state_est, u_t):
-        return np.squeeze(np.array([[0, 0, 0],
+        return np.array([[0, 0, 0],
                          [0, 0, 0],
                          [0, 0, dt],
                          [cos(state_est[THETA_INDEX].item()) * dt,      sin(state_est[THETA_INDEX].item()) * dt, 0],
                          [sin(state_est[THETA_INDEX].item()) * dt, -1 * cos(state_est[THETA_INDEX].item()) * dt, 0]]))
     
     def get_G_u_t(self, dt, state_est, u_t):
-        # manual = self.get_G_u_t_manual(dt, state_est, u_t)
-        auto = diff_function(self.applyMotionModelSingle, [dt, state_est, u_t], param=2)
-        return auto
+        manual = self.get_G_u_t_manual(dt, state_est, u_t)
+        # auto = diff_function(self.applyMotionModelSingle, [dt, state_est, u_t], param=2)
+        return manual
 
     def regroupSigmaPoints(self, dt, sigma_points_pred, u_t, R_t):
         # state prediction
@@ -96,8 +96,11 @@ class UKFBaseType:
         return (state_pred, sigma_pred)
 
     def get_z_pred(self, sigma_pt):
-        return np.array([sigma_pt[X_INDEX], sigma_pt[Y_INDEX], sigma_pt[XDOT_INDEX]*np.cos(np.squeeze(sigma_pt[THETA_INDEX])) +
-                                                               sigma_pt[YDOT_INDEX]*np.sin(np.squeeze(sigma_pt[THETA_INDEX]))])
+        return np.array([[sigma_pt[X_INDEX, 0]],
+                         [sigma_pt[Y_INDEX, 0]],
+                         [sigma_pt[XDOT_INDEX, 0] * cos(sigma_pt[THETA_INDEX, 0]) +
+                          sigma_pt[YDOT_INDEX, 0] * sin(sigma_pt[THETA_INDEX, 0])]])
+    
     def getPredictedMeasurements(self, sigma_points):
         Z_t_pred = []
         for sigma_pt in sigma_points:
