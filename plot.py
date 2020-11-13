@@ -95,8 +95,8 @@ for i, measurement in enumerate(data.transpose()):
     
     # call both EKF versions on this data
     deltaT = measurement[c['Elapsed Time (ms)']]
-    if(not(i == 0 or measurement[c['Lap']] != data[i-1][c['Lap']])):
-        deltaT -= data[i-1][c['Elapsed Time (ms)']]
+    if(not(i == 0 or measurement[c['Lap']] != data[c['Lap']][i-1])):
+        deltaT -= data[c['Elapsed Time (ms)']][i-1]
     ukfWithGPS.localize(deltaT, u_t, R_t, z_t, Q_t)
     ukfNoGPS.localize(deltaT, u_t, R_t, z_t_no_gps, Q_t_no_gps)
     
