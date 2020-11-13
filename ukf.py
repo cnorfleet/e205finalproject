@@ -64,6 +64,13 @@ class UKFBaseType:
             weights = weights + [1 / (2 * (self.nDOF + self.scaling_factor))]
         return weights
     
+    def get_G_u_t(self, dt, state_est, u_t):
+        return np.matrix([[0, 0, 0],
+                          [0, 0, 0],
+                          [0, 0, dt],
+                          [cos(state_est[THETA_INDEX]) * dt,      sin(state_est[THETA_INDEX]) * dt, 0],
+                          [sin(state_est[THETA_INDEX]) * dt, -1 * cos(state_est[THETA_INDEX]) * dt, 0]])
+    
     def regroupSigmaPoints(self, sigma_points_pred, u_t, R_t):
         # state prediction
         weights = self.getWeights()
