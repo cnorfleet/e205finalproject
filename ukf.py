@@ -1,4 +1,5 @@
 import numpy as np
+from numpy import sin, cos
 import math
 from scipy.linalg import sqrtm
 
@@ -114,27 +115,29 @@ class UKFBaseType:
         
         self.state_est = state_est
         self.sigma_est = sigma_est
-
-class UKFType(UKFBaseType):
-    def applyMotionModel(sigma_points, u_t):
+        
+    def applyMotionModel(self, dt, sigma_points, u_t):
         # predict next state for each sigma point
         sigma_points_pred = []
         for sigma_pt in sigma_points:
             pt = np.zeros((5))
-            pt[0] = sigma_points[0]+sigma_points[3]*dt
-            pt[1] = sigma_points[1]+sigma_points[4]*dt
-            pt[2] = sigma_points[2]+u_t[2]*dt
-            pt[3] = sigma_points[3]+(u_t[0]*np.cos(sigma_points[2]) + u_t[1]*np.sin(sigma_points[2]))*dt
-            pt[4] = sigma_points[4]+(u_t[0]*np.sin(sigma_points[2]) - u_t[1]*np.cos(sigma_points[2]))*dt
+            pt[X_INDEX]     = sigma_pt[X_INDEX] + sigma_pt[XDOT_INDEX] * dt
+            pt[Y_INDEX]     = sigma_pt[Y_INDEX] + sigma_pt[YDOT_INDEX] * dt
+            pt[THETA_INDEX] = wrap_to_pi(sigma_pt[THETA_INDEX] + u_t[THETADOT_INPUT_INDEX] * dt)
+            pt[XDOT_INDEX]  = sigma_pt[XDOT_INDEX] + (u_t[AF_INPUT_INDEX] * cos(sigma_pt[THETA_INDEX]) +
+                                                      u_t[AR_INPUT_INDEX] * sin(sigma_pt[THETA_INDEX])) * dt
+            pt[YDOT_INDEX]  = sigma_pt[YDOT_INDEX] + (u_t[AF_INPUT_INDEX] * sin(sigma_pt[THETA_INDEX]) -
+                                                      u_t[AR_INPUT_INDEX] * cos(sigma_pt[THETA_INDEX])) * dt
             sigma_points_pred.append(pt)
         return sigma_points_pred
-        
+
+class UKFType(UKFBaseType):
     def localize(self, dt, u_t, R_t, z_t, Q_t):
         # prediction step using sigma points
-        sigma_points = UKFType.getSigmaPoints(self.state_est, self.sigma_est, self.nDOF, self.scaling_factor)
-        sigma_points_model = UKFType.applyMotionModel(sigma_points, u_t)
+        sigma_points = UKFBaseType.getSigmaPoints(self.state_est, self.sigma_est, self.nDOF, self.scaling_factor)
+        sigma_points_model = self.applyMotionModel(dt, sigma_points, u_t)
         (state_pred, sigma_pred) = self.regroupSigmaPoints(sigma_points_model, u_t, R_t)
-        sigma_points_pred = UKFType.getSigmaPoints(state_pred, sigma_pred, self.nDOF, self.scaling_factor)
+        sigma_points_pred = UKFBaseType.getSigmaPoints(state_pred, sigma_pred, self.nDOF, self.scaling_factor)
         
         # correction step
         outputs = self.correctionStep(state_pred, sigma_pred, sigma_points_pred, z_t, Q_t)
@@ -142,25 +145,12 @@ class UKFType(UKFBaseType):
         return outputs
     
 class UKFWithoutGPSType(UKFBaseType):
-    def applyMotionModel(sigma_points, u_t):
-        # predict next state for each sigma point
-        sigma_points_pred = []
-        for sigma_pt in sigma_points:
-            pt = np.zeros((5))
-            pt[0] = sigma_points[0]+sigma_points[3]*dt
-            pt[1] = sigma_points[1]+sigma_points[4]*dt
-            pt[2] = sigma_points[2]+u_t[2]*dt
-            pt[3] = sigma_points[3]+(u_t[0]*np.cos(sigma_points[2]) + u_t[1]*np.sin(sigma_points[2]))*dt
-            pt[4] = sigma_points[4]+(u_t[0]*np.sin(sigma_points[2]) - u_t[1]*np.cos(sigma_points[2]))*dt
-            sigma_points_pred.append(pt)
-        return sigma_points_pred
-    
     def localize(self, dt, u_t, R_t, z_t, Q_t):
         # prediction step using sigma points
-        sigma_points = UKFType.getSigmaPoints(self.state_est, self.sigma_est, self.nDOF, self.scaling_factor)
-        sigma_points_model = UKFType.applyMotionModel(sigma_points, u_t)
+        sigma_points = UKFBaseType.getSigmaPoints(self.state_est, self.sigma_est, self.nDOF, self.scaling_factor)
+        sigma_points_model = self.applyMotionModel(dt, sigma_points, u_t)
         (state_pred, sigma_pred) = self.regroupSigmaPoints(sigma_points_model, u_t, R_t)
-        sigma_points_pred = UKFType.getSigmaPoints(state_pred, sigma_pred, self.nDOF, self.scaling_factor)
+        sigma_points_pred = UKFBaseType.getSigmaPoints(state_pred, sigma_pred, self.nDOF, self.scaling_factor)
         
         # correction step
         outputs = self.correctionStep(state_pred, sigma_pred, sigma_points_pred, z_t, Q_t)
