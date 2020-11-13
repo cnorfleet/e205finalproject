@@ -44,7 +44,8 @@ class UKFBaseType:
         sigma_0 = state
         sigma_1_n = []
         for i in range(nDOF):
-            diff = (sqrtm((nDOF + scaling_factor) * np.array(sigma_matrix)))[i]
+            mat = (nDOF + scaling_factor) * np.array(sigma_matrix)
+            diff = (sqrtm(mat))[i]
             diff = np.array(diff)
             sigma_pt = state + [[diff[i]] for i in range(nDOF)]
             sigma_1_n = sigma_1_n + [sigma_pt]
@@ -64,15 +65,17 @@ class UKFBaseType:
             weights = weights + [1 / (2 * (self.nDOF + self.scaling_factor))]
         return weights
     
-    def get_G_u_t(self, dt, state_est, u_t):
-        return np.array([[0, 0, 0],
+    def get_G_u_t_manual(self, dt, state_est, u_t):
+        return np.squeeze(np.array([[0, 0, 0],
                          [0, 0, 0],
                          [0, 0, dt],
                          [cos(state_est[THETA_INDEX]) * dt,      sin(state_est[THETA_INDEX]) * dt, 0],
-                         [sin(state_est[THETA_INDEX]) * dt, -1 * cos(state_est[THETA_INDEX]) * dt, 0]])
+                         [sin(state_est[THETA_INDEX]) * dt, -1 * cos(state_est[THETA_INDEX]) * dt, 0]]))
     
-    #def get_G_u_t(self, est, u_t):
-    #    return diff_function(self.applyMotionModelSingle, [dt, est, u_t], param=2)
+    def get_G_u_t(self, dt, state_est, u_t):
+        manual = self.get_G_u_t_manual(dt, state_est, u_t)
+        auto = diff_function(self.applyMotionModelSingle, [dt, state_est, u_t], param=2)
+        return auto
 
     def regroupSigmaPoints(self, dt, sigma_points_pred, u_t, R_t):
         # state prediction
