@@ -36,7 +36,7 @@ class UKFBaseType:
         self.nDOF = nDOF
         self.nControl = nControl
         self.nMeas = nMeas
-        self.state_est = np.matrix([[0] for _ in range(nDOF)])
+        self.state_est = np.array([[0] for _ in range(nDOF)])
         self.sigma_est = np.diag([100 for _ in range(nDOF)]) # initially large for arbitrary estimate
         self.scaling_factor = scaling_factor # lambda scaling factor
         
@@ -45,14 +45,14 @@ class UKFBaseType:
         sigma_1_n = []
         for i in range(nDOF):
             diff = (sqrtm((nDOF + scaling_factor) * np.array(sigma_matrix)))[i]
-            diff = np.matrix(diff)
+            diff = np.array(diff)
             sigma_pt = state + [[diff[0, i]] for i in range(nDOF)]
             sigma_1_n = sigma_1_n + [sigma_pt]
         sigma_nplus1_2n = []
         for j in range(nDOF):
             i = j + nDOF
             diff = (sqrtm((nDOF + scaling_factor) * sigma_matrix))[i-nDOF]
-            diff = np.matrix(diff)
+            diff = np.array(diff)
             sigma_pt = state - [[diff[0, i]] for i in range(nDOF)]
             sigma_nplus1_2n = sigma_nplus1_2n + [sigma_pt]
         return [sigma_0] + sigma_1_n + sigma_nplus1_2n
@@ -65,11 +65,11 @@ class UKFBaseType:
         return weights
     
     def get_G_u_t(self, dt, state_est, u_t):
-        return np.matrix([[0, 0, 0],
-                          [0, 0, 0],
-                          [0, 0, dt],
-                          [cos(state_est[THETA_INDEX]) * dt,      sin(state_est[THETA_INDEX]) * dt, 0],
-                          [sin(state_est[THETA_INDEX]) * dt, -1 * cos(state_est[THETA_INDEX]) * dt, 0]])
+        return np.array([[0, 0, 0],
+                         [0, 0, 0],
+                         [0, 0, dt],
+                         [cos(state_est[THETA_INDEX]) * dt,      sin(state_est[THETA_INDEX]) * dt, 0],
+                         [sin(state_est[THETA_INDEX]) * dt, -1 * cos(state_est[THETA_INDEX]) * dt, 0]])
     
     #def get_G_u_t(self, est, u_t):
     #    return diff_function(self.applyMotionModelSingle, [dt, est, u_t], param=2)

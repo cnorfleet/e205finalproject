@@ -78,14 +78,14 @@ for i, measurement in enumerate(data.transpose()):
     a_f = measurement[c['Longitudinal Acceleration (m/s^2)']] # m/s^2
     a_r = measurement[c['Lateral Acceleration (m/s^2)']]      # m/s^2
     thetaDot = -1 * measurement[c['Yaw Rate (rad/s)']]        # rad/s
-    u_t = np.matrix([[a_f], [a_r], [thetaDot]])
+    u_t = np.array([[a_f], [a_r], [thetaDot]])
     R_t = np.diag([1**2, 1**2, 1**2])   # u_t variance, from last 100 points # TODO: make these values right
     
     # calculate measurement input
     v_f = measurement[c['Speed (MPH)']]
     gps_x = gps_x_all[i]
     gps_y = gps_y_all[i]
-    z_t = np.matrix([[v_f], [gps_x], [gps_y]])
+    z_t = np.array([[v_f], [gps_x], [gps_y]])
     Q_t = np.diag([1**2, 1**2, 1**2]) # TODO: aaaa
     
     # measurement input w/o GPS
