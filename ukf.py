@@ -46,14 +46,14 @@ class UKFBaseType:
         for i in range(nDOF):
             diff = (sqrtm((nDOF + scaling_factor) * np.array(sigma_matrix)))[i]
             diff = np.array(diff)
-            sigma_pt = state + [[diff[0, i]] for i in range(nDOF)]
+            sigma_pt = state + [[diff[i]] for i in range(nDOF)]
             sigma_1_n = sigma_1_n + [sigma_pt]
         sigma_nplus1_2n = []
         for j in range(nDOF):
             i = j + nDOF
             diff = (sqrtm((nDOF + scaling_factor) * sigma_matrix))[i-nDOF]
             diff = np.array(diff)
-            sigma_pt = state - [[diff[0, i]] for i in range(nDOF)]
+            sigma_pt = state - [[diff[i]] for i in range(nDOF)]
             sigma_nplus1_2n = sigma_nplus1_2n + [sigma_pt]
         return [sigma_0] + sigma_1_n + sigma_nplus1_2n
     
