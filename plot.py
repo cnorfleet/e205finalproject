@@ -1,9 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy.linalg import inv
 
-from ukf import wrap_to_pi, UKFType, UKFWithoutGPSType, N_DOF, N_CONTROL, N_MEAS, N_MEAS_NO_GPS, X_INDEX, Y_INDEX, THETA_INDEX
-from ukf import *
+from ukf import wrap_to_pi, UKFType, UKFWithoutGPSType, N_DOF, N_CONTROL, \
+                N_MEAS, N_MEAS_NO_GPS, X_INDEX, Y_INDEX, THETA_INDEX, START_ANGLE
 
 # data column lookup
 c = {key: i for i, key in enumerate(['Lap',
@@ -63,6 +62,8 @@ sigma = np.identity(state_dims)
 num_samples = data.shape[1]
 prev_states_gps = np.zeros((state_dims, num_samples))
 prev_variances_gps = np.zeros((state_dims, state_dims, num_samples))
+prev_states_gps_plus3sd = np.zeros((state_dims, num_samples))
+prev_states_gps_minus3sd = np.zeros((state_dims, num_samples))
 prev_states_no_gps = np.zeros((state_dims, num_samples))
 prev_variances_no_gps = np.zeros((state_dims, state_dims, num_samples))
 integratedTheta = np.zeros((num_samples))
@@ -79,7 +80,7 @@ ukfNoGPS = UKFWithoutGPSType(N_DOF, N_CONTROL, N_MEAS_NO_GPS)
 for i, measurement in enumerate(data.transpose()):
     # calculate control input
     a_f = measurement[c['Longitudinal Acceleration (m/s^2)']] # m/s^2
-    a_r = -1 * measurement[c['Lateral Acceleration (m/s^2)']]      # m/s^2
+    a_r = -1 * measurement[c['Lateral Acceleration (m/s^2)']] # m/s^2
     thetaDot = -1 * measurement[c['Yaw Rate (rad/s)']]        # rad/s
     u_t = np.array([[a_f], [a_r], [thetaDot]])
     R_t = np.diag([0.023481**2, 0.027114**2, 0.000545586**2])
@@ -120,35 +121,47 @@ for i, measurement in enumerate(data.transpose()):
     prev_states_no_gps[:,i] = np.squeeze(no_gps_state)
     prev_variances_no_gps[:,:,i] = no_gps_sigma
     if(i == 0):
-        integratedTheta[i] = 0
+        integratedTheta[i] = START_ANGLE
     else:
         integratedTheta[i] = wrap_to_pi(integratedTheta[i-1] + thetaDot*deltaT)
+        
+    for idx in range(N_DOF):
+        prev_states_gps_plus3sd[idx][i]  = gps_state[idx] + 3 * np.sqrt(gps_sigma[idx][idx])
+        prev_states_gps_minus3sd[idx][i] = gps_state[idx] - 3 * np.sqrt(gps_sigma[idx][idx])
 
 # Plot data
 points =  np.array([gps_x_all, gps_y_all])
 plt.figure(1)
-plt.plot(points[0], points[1])
+plt.plot(prev_states_gps[X_INDEX], prev_states_gps[Y_INDEX], label='Estimated Position')
+plt.plot(points[0], points[1], label='GPS Position')
 plt.xlabel('X Position (m)')
 plt.ylabel('Y Position (m)')
 plt.title('GPS Position')
-plt.figure(3)
-plt.plot(data[c['Elapsed Time (ms)']], data[c['Lateral Acceleration (m/s^2)']])
-plt.xlabel('X Position (m)')
-plt.ylabel('Y Position (m)')
-plt.title('GPS Position')
+plt.legend()
+plt.grid(True)
 
-plt.figure(2)
-plt.plot(prev_states_gps[X_INDEX], prev_states_gps[Y_INDEX])
+#plt.figure(3)
+#plt.plot(data[c['Elapsed Time (ms)']], data[c['Lateral Acceleration (m/s^2)']])
+#plt.xlabel('time')
+#plt.ylabel('accel')
+#plt.title('Lateral accel')
+
 
 # show x, y, theta values
-f, (ax0, ax1, ax2, ax3) = plt.subplots(4, 1, sharex = True)
-line0, = ax0.plot(data[c['Elapsed Time (ms)']], prev_states_gps[X_INDEX, :], color='b')
-line1, = ax1.plot(data[c['Elapsed Time (ms)']], prev_states_gps[Y_INDEX, :], color='b')
-line2, = ax2.plot(data[c['Elapsed Time (ms)']], prev_states_gps[THETA_INDEX, :], color='b')
+f, (ax0, ax1, ax2) = plt.subplots(3, 1, sharex = True)
+line0,  = ax0.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps[X_INDEX, :], color='b')
+line0p, = ax0.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_plus3sd[X_INDEX, :], color='r')
+line0m, = ax0.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_minus3sd[X_INDEX, :], color='r')
+line1,  = ax1.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps[Y_INDEX, :], color='b')
+line1p, = ax1.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_plus3sd[Y_INDEX, :], color='r')
+line1m, = ax1.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_minus3sd[Y_INDEX, :], color='r')
+line2,  = ax2.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps[THETA_INDEX, :], color='b')
+line2p, = ax2.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_plus3sd[THETA_INDEX, :], color='r')
+line2m, = ax2.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_minus3sd[THETA_INDEX, :], color='r')
 
-gps0,  = ax0.plot(data[c['Elapsed Time (ms)']], gps_x_all, color='r')
-gps1,  = ax1.plot(data[c['Elapsed Time (ms)']], gps_y_all, color='r')
-gps2,  = ax2.plot(data[c['Elapsed Time (ms)']], integratedTheta, color='r')
+gps0,   = ax0.plot(data[c['Elapsed Time (ms)']]/1000, gps_x_all, color='g')
+gps1,   = ax1.plot(data[c['Elapsed Time (ms)']]/1000, gps_y_all, color='g')
+gps2,   = ax2.plot(data[c['Elapsed Time (ms)']]/1000, integratedTheta, color='g')
 
 # line3, = ax3.plot(TIMES, errors, color='b')
 # line3gps, = ax3.plot(TIMES, gps_est_err, color='g')
@@ -157,13 +170,13 @@ gps2,  = ax2.plot(data[c['Elapsed Time (ms)']], integratedTheta, color='r')
 ax0.grid(True)
 ax1.grid(True)
 ax2.grid(True)
-ax3.grid(True)
+#ax3.grid(True)
 
-ax3.set_xlabel("Time (seconds)")
-ax0.set_ylabel("X Location (meters)")
-ax1.set_ylabel("Y Location (meters)")
+ax2.set_xlabel("Time (seconds)")
+ax0.set_ylabel("X (meters)")
+ax1.set_ylabel("Y (meters)")
 ax2.set_ylabel("Theta (radians)")
-ax3.set_ylabel("Particle Filter Pos Error (m)")
+#ax3.set_ylabel("Pos Error (m)")
 plt.setp(ax0.get_xticklabels(), visible=False)
 
 #fig, ax1 = plt.subplots()
