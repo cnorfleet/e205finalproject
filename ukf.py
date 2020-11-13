@@ -64,6 +64,9 @@ class UKFBaseType:
             weights = weights + [1 / (2 * (self.nDOF + self.scaling_factor))]
         return weights
     
+    def get_G_u_t(self, est, u_t):
+        return diff_function(applyMotionModelSingle, [dt, est, u_t], param=2)
+
     def regroupSigmaPoints(self, sigma_points_pred, u_t, R_t):
         # state prediction
         weights = self.getWeights()
@@ -120,16 +123,20 @@ class UKFBaseType:
         # predict next state for each sigma point
         sigma_points_pred = []
         for sigma_pt in sigma_points:
-            pt = np.zeros((5))
-            pt[X_INDEX]     = sigma_pt[X_INDEX] + sigma_pt[XDOT_INDEX] * dt
-            pt[Y_INDEX]     = sigma_pt[Y_INDEX] + sigma_pt[YDOT_INDEX] * dt
-            pt[THETA_INDEX] = wrap_to_pi(sigma_pt[THETA_INDEX] + u_t[THETADOT_INPUT_INDEX] * dt)
-            pt[XDOT_INDEX]  = sigma_pt[XDOT_INDEX] + (u_t[AF_INPUT_INDEX] * cos(sigma_pt[THETA_INDEX]) +
-                                                      u_t[AR_INPUT_INDEX] * sin(sigma_pt[THETA_INDEX])) * dt
-            pt[YDOT_INDEX]  = sigma_pt[YDOT_INDEX] + (u_t[AF_INPUT_INDEX] * sin(sigma_pt[THETA_INDEX]) -
-                                                      u_t[AR_INPUT_INDEX] * cos(sigma_pt[THETA_INDEX])) * dt
+            pt = applyMotionModelSingle(dt, sigma_points, u_t)
             sigma_points_pred.append(pt)
         return sigma_points_pred
+
+    def applyMotionModelSingle(self, dt, sigma_pt, u_t):
+        pt = np.zeros((5))
+        pt[X_INDEX]     = sigma_pt[X_INDEX] + sigma_pt[XDOT_INDEX] * dt
+        pt[Y_INDEX]     = sigma_pt[Y_INDEX] + sigma_pt[YDOT_INDEX] * dt
+        pt[THETA_INDEX] = wrap_to_pi(sigma_pt[THETA_INDEX] + u_t[THETADOT_INPUT_INDEX] * dt)
+        pt[XDOT_INDEX]  = sigma_pt[XDOT_INDEX] + (u_t[AF_INPUT_INDEX] * cos(sigma_pt[THETA_INDEX]) +
+                                                  u_t[AR_INPUT_INDEX] * sin(sigma_pt[THETA_INDEX])) * dt
+        pt[YDOT_INDEX]  = sigma_pt[YDOT_INDEX] + (u_t[AF_INPUT_INDEX] * sin(sigma_pt[THETA_INDEX]) -
+                                                  u_t[AR_INPUT_INDEX] * cos(sigma_pt[THETA_INDEX])) * dt
+        return pt
 
 class UKFType(UKFBaseType):
     def localize(self, dt, u_t, R_t, z_t, Q_t):
@@ -156,3 +163,30 @@ class UKFWithoutGPSType(UKFBaseType):
         outputs = self.correctionStep(state_pred, sigma_pred, sigma_points_pred, z_t, Q_t)
         
         return outputs
+
+def diff_function(func, params, param=0):
+    """Takes derivative of Python function func at location params about parameter param.
+
+    I didn't want to take derivatives, so I spent far longer working on this function than if I had just taken them. I
+    still took the derivatives to verify that it works, and it seems to be very accurate (same to all decimals printed
+    where tested). This assumes that the function is decently well-behaved and doesn't have any weird jumps.
+    """
+    # compute reference point
+    a = func(*params)
+
+    # output array is modified array by output
+    result = np.zeros((a.size, params[param].size))
+    for i in range(params[param].size):
+        # twiddle each parameter
+        delta = np.zeros(params[param].shape)
+        twiddle = 0.00001   # named in honor of the twiddle factor in Sebastian Thrun's intro
+        delta[i] = twiddle  # to robotics class PID autotuner
+        
+        # construct function arguments
+        param_d = params[:param] + [params[param] + delta] + params[param+1:]
+        b = func(*param_d)
+        derivative = (b-a)/twiddle
+        result[:, i] = np.squeeze(derivative)
+    return result
+
+
