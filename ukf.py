@@ -65,7 +65,7 @@ class UKFBaseType:
         return weights
     
     def get_G_u_t(self, est, u_t):
-        return diff_function(applyMotionModelSingle, [dt, est, u_t], param=2)
+        return diff_function(self.applyMotionModelSingle, [dt, est, u_t], param=2)
 
     def regroupSigmaPoints(self, sigma_points_pred, u_t, R_t):
         # state prediction
@@ -123,7 +123,7 @@ class UKFBaseType:
         # predict next state for each sigma point
         sigma_points_pred = []
         for sigma_pt in sigma_points:
-            pt = applyMotionModelSingle(dt, sigma_points, u_t)
+            pt = self.applyMotionModelSingle(dt, sigma_points, u_t)
             sigma_points_pred.append(pt)
         return sigma_points_pred
 
