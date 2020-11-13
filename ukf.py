@@ -129,7 +129,7 @@ class UKFType(UKFBaseType):
             sigma_points_pred.append(pt)
         return sigma_points_pred
         
-    def localize(self, u_t, R_t, z_t, Q_t):
+    def localize(self, dt, u_t, R_t, z_t, Q_t):
         # prediction step using sigma points
         sigma_points = UKFType.getSigmaPoints(self.state_est, self.sigma_est, self.nDOF, self.scaling_factor)
         sigma_points_model = UKFType.applyMotionModel(sigma_points, u_t)
@@ -147,7 +147,7 @@ class UKFWithoutGPSType(UKFBaseType):
         # TODO: aaa
         pass
     
-    def localize(self, u_t, R_t, z_t, Q_t):
+    def localize(self, dt, u_t, R_t, z_t, Q_t):
         # prediction step using sigma points
         sigma_points = UKFType.getSigmaPoints(self.state_est, self.sigma_est, self.nDOF, self.scaling_factor)
         sigma_points_model = UKFType.applyMotionModel(sigma_points, u_t)

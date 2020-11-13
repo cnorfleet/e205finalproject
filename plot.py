@@ -49,19 +49,10 @@ def convert_gps_to_xy(lat_gps, lon_gps, lat_origin, lon_origin):
 
     return (x_gps, y_gps)
 
-def measure(m):
-    """Convert CSV to measurement."""
-    return np.array([m[c['x']], m[c['y']], m[c['z']], m[c['theta']]]).reshape(-1, 1)
-
-def sensor_model(x):
-    """Convert state to predicted sensor measurement."""
-    # just return the x, y, z, theta of the state
-    return np.array([x[s['x']], x[s['y']], x[s['z']], x[s['t']]]).reshape(-1, 1)
-
 # load data
 data = np.genfromtxt("Data/telemetry-v1-2020-03-10-13_50_14.csv", delimiter=",")[270:4300].transpose()
 origin = [data[c['Latitude (decimal)']][0], data[c['Longitude (decimal)']][0]]
-print(origin)
+# print(origin)
 (gps_x_all, gps_y_all) = convert_gps_to_xy(data[c['Latitude (decimal)']], data[c['Longitude (decimal)']], origin[0], origin[1])
 
 state = np.zeros((state_dims, 1))
@@ -102,8 +93,11 @@ for i, measurement in enumerate(data.transpose()):
     Q_t_no_gps = Q_t[:-2]
     
     # call both EKF versions on this data
-    ukfWithGPS.localize(u_t, R_t, z_t, Q_t)
-    ukfNoGPS.localize(u_t, R_t, z_t_no_gps, Q_t_no_gps)
+    deltaT = measurement[c['Elapsed Time (ms)']]
+    if(not(i == 0 or measurement[c['Lap']] != data[i-1][c['Lap']])):
+        deltaT -= data[i-1][c['Elapsed Time (ms)']]
+    ukfWithGPS.localize(deltaT, u_t, R_t, z_t, Q_t)
+    ukfNoGPS.localize(deltaT, u_t, R_t, z_t_no_gps, Q_t_no_gps)
     
     # get state and variance
     gps_state = ukfWithGPS.state_est
