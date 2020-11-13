@@ -50,21 +50,21 @@ class UKFBaseType:
             sigmaPts[i+1]      = (state + [[diff[j]] for j in range(nDOF)])
             sigmaPts[i+1+nDOF] = (state - [[diff[j]] for j in range(nDOF)])
         return sigmaPts
-    
+
     def getWeights(self):
         # weights for the regrouping algorithm.  note that the sum of all weights is 1
         weights = [ self.scaling_factor / (self.nDOF + self.scaling_factor) ]
         for i in range(2 * self.nDOF):
             weights = weights + [1 / (2 * (self.nDOF + self.scaling_factor))]
         return weights
-    
+
     def get_G_u_t_manual(self, dt, state_est, u_t):
         return np.array([[0, 0, 0],
                          [0, 0, 0],
                          [0, 0, dt],
                          [cos(state_est[THETA_INDEX].item()) * dt, 0, 0], #     sin(state_est[THETA_INDEX].item()) * dt, 0],
                          [sin(state_est[THETA_INDEX].item()) * dt, 0, 0]]) # -1 * cos(state_est[THETA_INDEX].item()) * dt, 0]])
-    
+
     def get_G_u_t(self, dt, state_est, u_t):
         manual = self.get_G_u_t_manual(dt, state_est, u_t)
         # auto = diff_function(self.applyMotionModelSingle, [dt, state_est, u_t], param=2)
@@ -92,14 +92,14 @@ class UKFBaseType:
                           sigma_pt[YDOT_INDEX, 0] * sin(sigma_pt[THETA_INDEX, 0])],
                          [sigma_pt[X_INDEX, 0]],
                          [sigma_pt[Y_INDEX, 0]]])
-    
+
     def getPredictedMeasurements(self, sigma_points):
         Z_t_pred = []
         for sigma_pt in sigma_points:
             z_t = self.get_z_pred(sigma_pt)
             Z_t_pred.append(z_t)
         return np.array(Z_t_pred)
-    
+
     def correctionStep(self, state_pred, sigma_pred, sigma_points_pred, z_t, Q_t):
         Z_t_pred = self.getPredictedMeasurements(sigma_points_pred)
         weights = self.getWeights()
@@ -126,7 +126,7 @@ class UKFBaseType:
         
         self.state_est = state_est
         self.sigma_est = sigma_est
-        
+
     def applyMotionModel(self, dt, sigma_points, u_t):
         # predict next state for each sigma point
         sigma_points_pred = []
@@ -144,6 +144,7 @@ class UKFBaseType:
         pt[YDOT_INDEX, 0]  = sigma_pt[YDOT_INDEX] + dt * (u_t[AF_INPUT_INDEX] * sin(sigma_pt[THETA_INDEX])) # - u_t[AR_INPUT_INDEX] * cos(sigma_pt[THETA_INDEX]))
         return pt
 
+
 class UKFType(UKFBaseType):
     def localize(self, dt, u_t, R_t, z_t, Q_t):
         # prediction step using sigma points
@@ -156,7 +157,8 @@ class UKFType(UKFBaseType):
         outputs = self.correctionStep(state_pred, sigma_pred, sigma_points_pred, z_t, Q_t)
         
         return outputs
-    
+
+
 class UKFWithoutGPSType(UKFBaseType):
     def localize(self, dt, u_t, R_t, z_t, Q_t):
         # prediction step using sigma points
