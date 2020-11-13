@@ -144,8 +144,16 @@ class UKFType(UKFBaseType):
 class UKFWithoutGPSType(UKFBaseType):
     def applyMotionModel(sigma_points, u_t):
         # predict next state for each sigma point
-        # TODO: aaa
-        pass
+        sigma_points_pred = []
+        for sigma_pt in sigma_points:
+            pt = np.zeros((5))
+            pt[0] = sigma_points[0]+sigma_points[3]*dt
+            pt[1] = sigma_points[1]+sigma_points[4]*dt
+            pt[2] = sigma_points[2]+u_t[2]*dt
+            pt[3] = sigma_points[3]+(u_t[0]*np.cos(sigma_points[2]) + u_t[1]*np.sin(sigma_points[2]))*dt
+            pt[4] = sigma_points[4]+(u_t[0]*np.sin(sigma_points[2]) - u_t[1]*np.cos(sigma_points[2]))*dt
+            sigma_points_pred.append(pt)
+        return sigma_points_pred
     
     def localize(self, dt, u_t, R_t, z_t, Q_t):
         # prediction step using sigma points
