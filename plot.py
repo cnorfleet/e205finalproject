@@ -119,7 +119,6 @@ for i, measurement in enumerate(data.transpose()):
 points =  np.array([gps_x_all, gps_y_all])
 plt.figure(1)
 plt.plot(points[0], points[1])
-print(xy)
 plt.xlabel('X Position (m)')
 plt.ylabel('Y Position (m)')
 plt.title('GPS Position')

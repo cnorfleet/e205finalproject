@@ -200,5 +200,3 @@ def diff_function(func, params, param = 0):
         derivative = (b-a)/twiddle
         result[:, i] = np.squeeze(derivative)
     return result
-
-
