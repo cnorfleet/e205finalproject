@@ -70,8 +70,8 @@ class UKFBaseType:
         return np.array([[0, 0, 0],
                          [0, 0, 0],
                          [0, 0, dt],
-                         [cos(state_est[THETA_INDEX, 0]) * dt,      sin(state_est[THETA_INDEX, 0]) * dt, 0],
-                         [sin(state_est[THETA_INDEX, 0]) * dt, -1 * cos(state_est[THETA_INDEX, 0]) * dt, 0]])
+                         [cos(state_est[THETA_INDEX].item()) * dt,      sin(state_est[THETA_INDEX].item()) * dt, 0],
+                         [sin(state_est[THETA_INDEX].item()) * dt, -1 * cos(state_est[THETA_INDEX].item()) * dt, 0]]))
     
     def get_G_u_t(self, dt, state_est, u_t):
         manual = self.get_G_u_t_manual(dt, state_est, u_t)

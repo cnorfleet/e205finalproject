@@ -50,8 +50,8 @@ origin = [data[c['Latitude (decimal)']][0], data[c['Longitude (decimal)']][0]]
 (gps_x_all, gps_y_all) = convert_gps_to_xy(data[c['Latitude (decimal)']], data[c['Longitude (decimal)']], origin[0], origin[1])
 
 #print('Variances of last 100 points:')
-#data_vars = np.std(data[:, :100], axis=1)
-#print(', '.join([f'{list(c.keys())[list(c.values()).index(i)]}:{data_vars[i]:.8f}' for i in range(data_vars.size)]))
+data_vars = np.std(data[:, :100], axis=1)
+print(', '.join([f'{list(c.keys())[list(c.values()).index(i)]}:{data_vars[i]:.8f}' for i in range(data_vars.size)]))
 
 mu, std = norm.fit(data[c['Lateral Acceleration (m/s^2)']][0:200])
 print("mu = " + str(mu))
