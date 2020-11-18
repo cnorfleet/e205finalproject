@@ -64,8 +64,12 @@ prev_states_gps = np.zeros((state_dims, num_samples))
 prev_variances_gps = np.zeros((state_dims, state_dims, num_samples))
 prev_states_gps_plus3sd = np.zeros((state_dims, num_samples))
 prev_states_gps_minus3sd = np.zeros((state_dims, num_samples))
+
 prev_states_no_gps = np.zeros((state_dims, num_samples))
 prev_variances_no_gps = np.zeros((state_dims, state_dims, num_samples))
+prev_states_no_gps_plus3sd = np.zeros((state_dims, num_samples))
+prev_states_no_gps_minus3sd = np.zeros((state_dims, num_samples))
+
 integratedTheta = np.zeros((num_samples))
 error_est_with_gps = np.zeros((num_samples))
 error_est_no_gps = np.zeros((num_samples))
@@ -129,6 +133,8 @@ for i, measurement in enumerate(data.transpose()):
     for idx in range(N_DOF):
         prev_states_gps_plus3sd[idx][i]  = gps_state[idx] + 3 * np.sqrt(gps_sigma[idx][idx])
         prev_states_gps_minus3sd[idx][i] = gps_state[idx] - 3 * np.sqrt(gps_sigma[idx][idx])
+        prev_states_no_gps_plus3sd[idx][i]  = no_gps_state[idx] + 3 * np.sqrt(no_gps_sigma[idx][idx])
+        prev_states_no_gps_minus3sd[idx][i] = no_gps_state[idx] - 3 * np.sqrt(no_gps_sigma[idx][idx])
     
     # update state of without gps ukf to match the ukf with gps unless we're in a simulated gps blackout
     if((int(i/500))%2 == 0):
@@ -160,26 +166,34 @@ plt.savefig("nogps.png", dpi=600)
 
 # show x, y, theta values
 f, (ax0, ax1, ax2, ax3) = plt.subplots(4, 1, sharex = True)
-line0,  = ax0.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps[X_INDEX, :], color='b')
-line0p, = ax0.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_plus3sd[X_INDEX, :], color='r')
-line0m, = ax0.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_minus3sd[X_INDEX, :], color='r')
-line1,  = ax1.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps[Y_INDEX, :], color='b')
-line1p, = ax1.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_plus3sd[Y_INDEX, :], color='r')
-line1m, = ax1.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_minus3sd[Y_INDEX, :], color='r')
-line2,  = ax2.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps[THETA_INDEX, :], color='b')
-line2p, = ax2.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_plus3sd[THETA_INDEX, :], color='r')
-line2m, = ax2.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_minus3sd[THETA_INDEX, :], color='r')
+gps0,    = ax0.plot(data[c['Elapsed Time (ms)']]/1000, gps_x_all, color='g')
+line0,   = ax0.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps[X_INDEX, :], 'b-')
+line0p,  = ax0.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_plus3sd[X_INDEX, :], 'b:')
+line0m,  = ax0.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_minus3sd[X_INDEX, :], 'b:')
+line0n,  = ax0.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_no_gps[X_INDEX, :], 'r-')
+line0np, = ax0.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_no_gps_plus3sd[X_INDEX, :], 'r:')
+line0nm, = ax0.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_no_gps_minus3sd[X_INDEX, :], 'r:')
 
-gps0,   = ax0.plot(data[c['Elapsed Time (ms)']]/1000, gps_x_all, color='g')
-gps1,   = ax1.plot(data[c['Elapsed Time (ms)']]/1000, gps_y_all, color='g')
-# gps2,   = ax2.plot(data[c['Elapsed Time (ms)']]/1000, integratedTheta, color='g')
+gps1,    = ax1.plot(data[c['Elapsed Time (ms)']]/1000, gps_y_all, color='g')
+line1,   = ax1.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps[Y_INDEX, :], 'b-')
+line1p,  = ax1.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_plus3sd[Y_INDEX, :], 'b:')
+line1m,  = ax1.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_minus3sd[Y_INDEX, :], 'b:')
+line1n,  = ax1.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_no_gps[Y_INDEX, :], 'r-')
+line1np, = ax1.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_no_gps_plus3sd[Y_INDEX, :], 'r:')
+line1nm, = ax1.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_no_gps_minus3sd[Y_INDEX, :], 'r:')
+
+# gps2,    = ax2.plot(data[c['Elapsed Time (ms)']]/1000, integratedTheta, color='g')
+line2,   = ax2.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps[THETA_INDEX, :], 'b-')
+line2p,  = ax2.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_plus3sd[THETA_INDEX, :], 'b:')
+line2m,  = ax2.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_minus3sd[THETA_INDEX, :], 'b:')
+line2n,  = ax2.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_no_gps[THETA_INDEX, :], 'r-')
+line2np, = ax2.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_no_gps_plus3sd[THETA_INDEX, :], 'r:')
+line2nm, = ax2.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_no_gps_minus3sd[THETA_INDEX, :], 'r:')
 
 line3g, = ax3.plot(data[c['Elapsed Time (ms)']]/1000, error_est_with_gps, color = 'b')
 line3n, = ax3.plot(data[c['Elapsed Time (ms)']]/1000, error_est_no_gps, color = 'r')
-
-# line3, = ax3.plot(TIMES, errors, color='b')
-# line3gps, = ax3.plot(TIMES, gps_est_err, color='g')
-# ax3.legend((line3, line3gps), ('EKF Error', 'Measurement Model Only Error', 'GPS Error'), loc='upper right')
+ax0.legend((gps0, line0, line0n), ('GPS', 'EKF with GPS', 'EKF with no GPS'), loc='upper right')
+# ax3.legend((line3g, line3n), ('GPS Error', 'EKF with No GPS Error'), loc='upper right')
 
 ax0.grid(True)
 ax1.grid(True)
