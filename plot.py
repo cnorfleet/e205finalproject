@@ -67,6 +67,8 @@ prev_states_gps_minus3sd = np.zeros((state_dims, num_samples))
 prev_states_no_gps = np.zeros((state_dims, num_samples))
 prev_variances_no_gps = np.zeros((state_dims, state_dims, num_samples))
 integratedTheta = np.zeros((num_samples))
+error_est_with_gps = np.zeros((num_samples))
+error_est_no_gps = np.zeros((num_samples))
 
 # print('Variances of last 100 points:')
 # data_vars = np.std(data[:, -100:], axis=1)
@@ -112,14 +114,13 @@ for i, measurement in enumerate(data.transpose()):
     no_gps_state = ukfNoGPS.state_est
     no_gps_sigma = ukfNoGPS.sigma_est
     
-    # update state of without gps ukf to match the ukf with gps unless we're in a simulated gps blackout
-    # TODO: aaa
-    
     # update variables
     prev_states_gps[:,i] = np.squeeze(gps_state)
     prev_variances_gps[:,:,i] = gps_sigma
     prev_states_no_gps[:,i] = np.squeeze(no_gps_state)
     prev_variances_no_gps[:,:,i] = no_gps_sigma
+    error_est_with_gps[i] = np.sqrt((gps_state[X_INDEX, 0] - gps_x)**2 + (gps_state[Y_INDEX, 0] - gps_y)**2)
+    error_est_no_gps[i] = np.sqrt((no_gps_state[X_INDEX, 0] - gps_state[X_INDEX, 0])**2 + (no_gps_state[Y_INDEX, 0] - no_gps_state[Y_INDEX, 0])**2)
     if(i == 0):
         integratedTheta[i] = START_ANGLE
     else:
@@ -128,6 +129,11 @@ for i, measurement in enumerate(data.transpose()):
     for idx in range(N_DOF):
         prev_states_gps_plus3sd[idx][i]  = gps_state[idx] + 3 * np.sqrt(gps_sigma[idx][idx])
         prev_states_gps_minus3sd[idx][i] = gps_state[idx] - 3 * np.sqrt(gps_sigma[idx][idx])
+    
+    # update state of without gps ukf to match the ukf with gps unless we're in a simulated gps blackout
+    if((int(i/500))%2 == 0):
+        ukfNoGPS.state_est = ukfWithGPS.state_est
+        ukfNoGPS.sigma_est = ukfWithGPS.sigma_est
 
 # Plot data
 points =  np.array([gps_x_all, gps_y_all])
@@ -136,20 +142,24 @@ plt.plot(prev_states_gps[X_INDEX], prev_states_gps[Y_INDEX], label='Estimated Po
 plt.plot(points[0], points[1], label='GPS Position')
 plt.xlabel('X Position (m)')
 plt.ylabel('Y Position (m)')
-plt.title('GPS Position')
+plt.title('GPS EKF Position')
 plt.legend()
 plt.grid(True)
 plt.savefig("gps.png", dpi=600)
 
-#plt.figure(3)
-#plt.plot(data[c['Elapsed Time (ms)']], data[c['Lateral Acceleration (m/s^2)']])
-#plt.xlabel('time')
-#plt.ylabel('accel')
-#plt.title('Lateral accel')
+plt.figure(2)
+plt.plot(prev_states_no_gps[X_INDEX], prev_states_no_gps[Y_INDEX], label='Estimated Position')
+plt.plot(points[0], points[1], label='GPS Position')
+plt.xlabel('X Position (m)')
+plt.ylabel('Y Position (m)')
+plt.title('No GPS EKF Position')
+plt.legend()
+plt.grid(True)
+plt.savefig("nogps.png", dpi=600)
 
 
 # show x, y, theta values
-f, (ax0, ax1, ax2) = plt.subplots(3, 1, sharex = True)
+f, (ax0, ax1, ax2, ax3) = plt.subplots(4, 1, sharex = True)
 line0,  = ax0.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps[X_INDEX, :], color='b')
 line0p, = ax0.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_plus3sd[X_INDEX, :], color='r')
 line0m, = ax0.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_gps_minus3sd[X_INDEX, :], color='r')
@@ -164,6 +174,9 @@ gps0,   = ax0.plot(data[c['Elapsed Time (ms)']]/1000, gps_x_all, color='g')
 gps1,   = ax1.plot(data[c['Elapsed Time (ms)']]/1000, gps_y_all, color='g')
 # gps2,   = ax2.plot(data[c['Elapsed Time (ms)']]/1000, integratedTheta, color='g')
 
+line3g, = ax3.plot(data[c['Elapsed Time (ms)']]/1000, error_est_with_gps, color = 'b')
+line3n, = ax3.plot(data[c['Elapsed Time (ms)']]/1000, error_est_no_gps, color = 'r')
+
 # line3, = ax3.plot(TIMES, errors, color='b')
 # line3gps, = ax3.plot(TIMES, gps_est_err, color='g')
 # ax3.legend((line3, line3gps), ('EKF Error', 'Measurement Model Only Error', 'GPS Error'), loc='upper right')
@@ -171,24 +184,14 @@ gps1,   = ax1.plot(data[c['Elapsed Time (ms)']]/1000, gps_y_all, color='g')
 ax0.grid(True)
 ax1.grid(True)
 ax2.grid(True)
-#ax3.grid(True)
+ax3.grid(True)
 
 ax2.set_xlabel("Time (seconds)")
 ax0.set_ylabel("X (meters)")
 ax1.set_ylabel("Y (meters)")
 ax2.set_ylabel("Theta (radians)")
-#ax3.set_ylabel("Pos Error (m)")
+ax3.set_ylabel("Pos Error (m)")
 plt.setp(ax0.get_xticklabels(), visible=False)
 plt.savefig("error.png", dpi=600)
-#fig, ax1 = plt.subplots()
-#ax1.set_xlabel('Elapsed Time (ms)')
-#ax1.set_ylabel('Steering Angle (deg)', color='tab:blue')
-#ax1.plot(data[c['Elapsed Time (ms)']], data[c['Steering Angle (deg)']])
-#ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
-#color = 'tab:red'
-#ax2.set_ylabel('Power Level (KW)', color=color)  # we already handled the x-label with ax1
-#ax2.plot(data[c['Elapsed Time (ms)']], data[c['Power Level (KW)']], color=color)
-#plt.title('Steering and Power Data')
-#fig.tight_layout()  # otherwise the right y-label is slightly clipped
 
 plt.show()
