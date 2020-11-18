@@ -83,7 +83,7 @@ for i, measurement in enumerate(data.transpose()):
     a_r = -1 * measurement[c['Lateral Acceleration (m/s^2)']] # m/s^2
     thetaDot = -1 * measurement[c['Yaw Rate (rad/s)']]        # rad/s
     u_t = np.array([[a_f], [a_r], [thetaDot]])
-    R_t = np.diag([0.023481**2, 0.027114**2, 0.000545586**2])
+    R_t = np.diag([0.023481**2, 0.027114**2, (0.000545586*10)**2])
     
     # calculate measurement input
     v_f = mphToMps(measurement[c['Speed (MPH)']])

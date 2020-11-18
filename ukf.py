@@ -3,7 +3,7 @@ from numpy import sin, cos
 import math
 from scipy.linalg import sqrtm
 
-START_ANGLE = 2
+START_ANGLE = 3*np.pi/4
 
 X_INDEX = 0
 Y_INDEX = 1
@@ -39,7 +39,7 @@ class UKFBaseType:
         self.nControl = nControl
         self.nMeas = nMeas
         self.state_est = np.array([[0], [0], [START_ANGLE], [0], [0]])
-        self.sigma_est = np.diag([1**2, 1**2, 0.5**2, 1**2, 1**2]) # initially large for arbitrary estimate
+        self.sigma_est = np.diag([1**2, 1**2, 0.1**2, 1**2, 1**2]) # initially large for arbitrary estimate
         self.scaling_factor = scaling_factor # lambda scaling factor
         
     def getSigmaPoints(state, sigma_matrix, nDOF, scaling_factor):
@@ -62,8 +62,8 @@ class UKFBaseType:
         return np.array([[0, 0, 0],
                          [0, 0, 0],
                          [0, 0, dt],
-                         [cos(state_est[THETA_INDEX].item()) * dt, 0, 0], #     sin(state_est[THETA_INDEX].item()) * dt, 0],
-                         [sin(state_est[THETA_INDEX].item()) * dt, 0, 0]]) # -1 * cos(state_est[THETA_INDEX].item()) * dt, 0]])
+                         [cos(state_est[THETA_INDEX].item()) * dt,      sin(state_est[THETA_INDEX].item()) * dt, 0],
+                         [sin(state_est[THETA_INDEX].item()) * dt, -1 * cos(state_est[THETA_INDEX].item()) * dt, 0]])
 
     def get_G_u_t(self, dt, state_est, u_t):
         manual = self.get_G_u_t_manual(dt, state_est, u_t)
@@ -140,8 +140,8 @@ class UKFBaseType:
         pt[X_INDEX, 0]     = sigma_pt[X_INDEX] + sigma_pt[XDOT_INDEX] * dt
         pt[Y_INDEX, 0]     = sigma_pt[Y_INDEX] + sigma_pt[YDOT_INDEX] * dt
         pt[THETA_INDEX, 0] = wrap_to_pi(sigma_pt[THETA_INDEX] + u_t[THETADOT_INPUT_INDEX] * dt)
-        pt[XDOT_INDEX, 0]  = sigma_pt[XDOT_INDEX] + dt * (u_t[AF_INPUT_INDEX] * cos(sigma_pt[THETA_INDEX])) # +  u_t[AR_INPUT_INDEX] * sin(sigma_pt[THETA_INDEX]))
-        pt[YDOT_INDEX, 0]  = sigma_pt[YDOT_INDEX] + dt * (u_t[AF_INPUT_INDEX] * sin(sigma_pt[THETA_INDEX])) # - u_t[AR_INPUT_INDEX] * cos(sigma_pt[THETA_INDEX]))
+        pt[XDOT_INDEX, 0]  = sigma_pt[XDOT_INDEX] + dt * (u_t[AF_INPUT_INDEX] * cos(sigma_pt[THETA_INDEX]) + u_t[AR_INPUT_INDEX] * sin(sigma_pt[THETA_INDEX]))
+        pt[YDOT_INDEX, 0]  = sigma_pt[YDOT_INDEX] + dt * (u_t[AF_INPUT_INDEX] * sin(sigma_pt[THETA_INDEX]) - u_t[AR_INPUT_INDEX] * cos(sigma_pt[THETA_INDEX]))
         return pt
 
 
