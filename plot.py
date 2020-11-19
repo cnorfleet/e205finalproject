@@ -103,8 +103,8 @@ for i, measurement in enumerate(data.transpose()):
     v_f = mphToMps(measurement[c['Speed (MPH)']])
     gps_x = gps_x_all[i]
     gps_y = gps_y_all[i]
-    z_t = np.array([[v_f], [gps_x], [gps_y]])
-    Q_t = np.diag([(mphToMps(1))**2, (0.09326)**2, (0.11132)**2])
+    z_t = np.array([[v_f], [0], [gps_x], [gps_y]])
+    Q_t = np.diag([(mphToMps(1))**2, (mphToMps(1))**2, (0.09326)**2, (0.11132)**2])
     
     # measurement input w/o GPS
     z_t_no_gps = z_t[:-2]
@@ -156,27 +156,27 @@ for i, measurement in enumerate(data.transpose()):
         
         ukfNoGPS.state_est = ukfWithGPS.state_est
         ukfNoGPS.sigma_est = ukfWithGPS.sigma_est
-    else:
-        if(not neural_net_trained):
-            neural_net1.fit(trainingInputs, trainingOutputs1)
-            neural_net2.fit(trainingInputs, trainingOutputs2)
+    #else:
+        # if(not neural_net_trained):
+        #     neural_net1.fit(trainingInputs, trainingOutputs1)
+        #     neural_net2.fit(trainingInputs, trainingOutputs2)
             
-            predictions1 = neural_net1.predict(trainingInputs)
-            predictions2 = neural_net2.predict(trainingInputs)
-            print(neural_net1.score(trainingInputs, trainingOutputs1))
+        #     predictions1 = neural_net1.predict(trainingInputs)
+        #     predictions2 = neural_net2.predict(trainingInputs)
+        #     print(neural_net1.score(trainingInputs, trainingOutputs1))
             
-            neural_net_trained = True
+        #     neural_net_trained = True
         
-        netInput = [[ a_f, a_r, thetaDot ]]
-        netX = (neural_net1.predict(netInput))[0]
-        netY = (neural_net2.predict(netInput))[0]
+        # netInput = [[ a_f, a_r, thetaDot ]]
+        # netX = (neural_net1.predict(netInput))[0]
+        # netY = (neural_net2.predict(netInput))[0]
         
-        ukfNoGPS.state_est[X_INDEX, 0] = ukfNoGPS.state_est[X_INDEX, 0] + netX
-        ukfNoGPS.state_est[Y_INDEX, 0] = ukfNoGPS.state_est[Y_INDEX, 0] + netY
+        # ukfNoGPS.state_est[X_INDEX, 0] = ukfNoGPS.state_est[X_INDEX, 0] + netX
+        # ukfNoGPS.state_est[Y_INDEX, 0] = ukfNoGPS.state_est[Y_INDEX, 0] + netY
         
-        neuralNetT += [measurement[c['Elapsed Time (ms)']]/1000]
-        neuralNetX += [ukfNoGPS.state_est[X_INDEX, 0]]
-        neuralNetY += [ukfNoGPS.state_est[Y_INDEX, 0]]
+        # neuralNetT += [measurement[c['Elapsed Time (ms)']]/1000]
+        # neuralNetX += [ukfNoGPS.state_est[X_INDEX, 0]]
+        # neuralNetY += [ukfNoGPS.state_est[Y_INDEX, 0]]
 
 # Plot data
 points =  np.array([gps_x_all, gps_y_all])
@@ -230,7 +230,7 @@ line2np, = ax2.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_no_gps_plus3s
 line2nm, = ax2.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_no_gps_minus3sd[THETA_INDEX, :], 'r:')
 
 line3g, = ax3.plot(data[c['Elapsed Time (ms)']]/1000, error_est_with_gps, color = 'b')
-line3n, = ax3.plot(data[c['Elapsed Time (ms)']]/1000, error_est_no_gps, color = 'r')
+#line3n, = ax3.plot(data[c['Elapsed Time (ms)']]/1000, error_est_no_gps, color = 'r')
 ax0.legend((gps0, line0, line0n), ('GPS', 'UKF with GPS', 'UKF with no GPS'), loc='upper right')
 # ax3.legend((line3g, line3n), ('GPS Error', 'UKF with No GPS Error'), loc='upper right')
 
