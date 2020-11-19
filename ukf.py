@@ -66,13 +66,18 @@ class UKFBaseType:
         return manual
 
     def regroupSigmaPoints(self, dt, sigma_points_pred, u_t, R_t):
+        # center theta about sigma_points_pred[0]
+        thetaOffset = sigma_points_pred[0][THETA_INDEX, 0]
+        for i in range(2 * self.nDOF + 1):
+            sigma_points_pred[i][THETA_INDEX, 0] = wrap_to_pi(sigma_points_pred[i][THETA_INDEX, 0] - thetaOffset)
+        
         # state prediction
         weights = self.getWeights()
         state_pred = np.zeros((self.nDOF,1))
         for i in range(2 * self.nDOF + 1):
             sigma_points_pred[i][THETA_INDEX, 0] = wrap_to_pi(sigma_points_pred[i][THETA_INDEX, 0])
             state_pred = state_pred + weights[i] * sigma_points_pred[i]
-        state_pred[THETA_INDEX, 0] = wrap_to_pi(state_pred[THETA_INDEX, 0])
+        state_pred[THETA_INDEX, 0] = wrap_to_pi(state_pred[THETA_INDEX, 0] + thetaOffset)
             
         # update covariance matrix
         sigma_pred = np.zeros((self.nDOF, self.nDOF))
