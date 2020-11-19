@@ -19,10 +19,11 @@ N_CONTROL = 3
 
 # Note: GPS moved to last elements to unify between GPS and no GPS UKFs
 VF_MEAS_INDEX = 0
-GPS_X_MEAS_INDEX = 1
-GPS_Y_MEAS_INDEX = 2
-N_MEAS = 3
-N_MEAS_NO_GPS = 1
+VR_MEAS_INDEX = 1
+GPS_X_MEAS_INDEX = 2
+GPS_Y_MEAS_INDEX = 3
+N_MEAS = 4
+N_MEAS_NO_GPS = 2
 
 def wrap_to_pi(angle):
     while angle >= math.pi:
@@ -160,13 +161,17 @@ class UKFType(UKFBaseType):
     def get_z_pred(self, sigma_pt):
         return np.array([[sigma_pt[XDOT_INDEX, 0] * cos(sigma_pt[THETA_INDEX, 0]) +
                           sigma_pt[YDOT_INDEX, 0] * sin(sigma_pt[THETA_INDEX, 0])],
+                         [sigma_pt[XDOT_INDEX, 0] * sin(sigma_pt[THETA_INDEX, 0]) +
+                          sigma_pt[YDOT_INDEX, 0] * -1*cos(sigma_pt[THETA_INDEX, 0])],
                          [sigma_pt[X_INDEX, 0]],
                          [sigma_pt[Y_INDEX, 0]]])
 
 class UKFWithoutGPSType(UKFBaseType):
     def get_z_pred(self, sigma_pt):
         return np.array([[sigma_pt[XDOT_INDEX, 0] * cos(sigma_pt[THETA_INDEX, 0]) +
-                          sigma_pt[YDOT_INDEX, 0] * sin(sigma_pt[THETA_INDEX, 0])]])
+                          sigma_pt[YDOT_INDEX, 0] * sin(sigma_pt[THETA_INDEX, 0])],
+                         [sigma_pt[XDOT_INDEX, 0] * sin(sigma_pt[THETA_INDEX, 0]) +
+                          sigma_pt[YDOT_INDEX, 0] * -1*cos(sigma_pt[THETA_INDEX, 0])]])
 
 def diff_function(func, params, param = 0):
     """Takes derivative of Python function func at location params about parameter param.

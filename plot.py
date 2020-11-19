@@ -104,8 +104,8 @@ for i, measurement in enumerate(data.transpose()):
     v_f = mphToMps(measurement[c['Speed (MPH)']])
     gps_x = gps_x_all[i]
     gps_y = gps_y_all[i]
-    z_t = np.array([[v_f], [gps_x], [gps_y]])
-    Q_t = np.diag([(mphToMps(1))**2, (0.09326)**2, (0.11132)**2])
+    z_t = np.array([[v_f], [0], [gps_x], [gps_y]])
+    Q_t = np.diag([(mphToMps(1))**2, (mphToMps(3))**2, (0.09326)**2, (0.11132)**2])
     
     # measurement input w/o GPS
     z_t_no_gps = z_t[:-2]
