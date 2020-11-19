@@ -79,8 +79,8 @@ error_est_no_gps = np.zeros((num_samples))
 # print(', '.join([f'{list(c.keys())[list(c.values()).index(i)]}:{data_vars[i]:.2f}' for i in range(data_vars.size)]))
 
 # instantiate UKFs
-ukfWithGPS = UKFType(N_DOF, N_CONTROL, N_MEAS)
-ukfNoGPS = UKFWithoutGPSType(N_DOF, N_CONTROL, N_MEAS_NO_GPS)
+ukfWithGPS = UKFType(N_DOF, N_CONTROL, N_MEAS, 1)
+ukfNoGPS = UKFWithoutGPSType(N_DOF, N_CONTROL, N_MEAS_NO_GPS, 1)
 
 # run ukf
 for i, measurement in enumerate(data.transpose()):
@@ -89,14 +89,14 @@ for i, measurement in enumerate(data.transpose()):
     a_r = -1 * measurement[c['Lateral Acceleration (m/s^2)']] # m/s^2
     thetaDot = measurement[c['Yaw Rate (rad/s)']]        # rad/s
     u_t = np.array([[a_f], [a_r], [thetaDot]])
-    R_t = np.diag([(0.023481)**2, (0.027114)**2, (0.000545586*10)**2])
+    R_t = np.diag([(0.023481)**2, (0.027114)**2, (0.000545586)**2])
     
     # calculate measurement input
     v_f = mphToMps(measurement[c['Speed (MPH)']])
     gps_x = gps_x_all[i]
     gps_y = gps_y_all[i]
     z_t = np.array([[v_f], [gps_x], [gps_y]])
-    Q_t = np.diag([(mphToMps(10))**2, (0.09326)**2, (0.11132)**2])
+    Q_t = np.diag([(mphToMps(1))**2, (0.09326)**2, (0.11132)**2])
     
     # measurement input w/o GPS
     z_t_no_gps = z_t[:-2]
@@ -108,7 +108,7 @@ for i, measurement in enumerate(data.transpose()):
         deltaT -= data[c['Elapsed Time (ms)']][i-1]
     deltaT = deltaT / 1000 # from ms to seconds
     
-    # call both EKF versions on this data
+    # call both UKF versions on this data
     ukfWithGPS.localize(deltaT, u_t, R_t, z_t, Q_t)
     # ukfNoGPS.localize(deltaT, u_t, R_t, z_t_no_gps, Q_t_no_gps)
     
@@ -148,7 +148,7 @@ plt.plot(prev_states_gps[X_INDEX], prev_states_gps[Y_INDEX], label='Estimated Po
 plt.plot(points[0], points[1], label='GPS Position')
 plt.xlabel('X Position (m)')
 plt.ylabel('Y Position (m)')
-plt.title('GPS EKF Position')
+plt.title('GPS UKF Position')
 plt.legend()
 plt.grid(True)
 plt.savefig("gps.png", dpi=600)
@@ -158,7 +158,7 @@ plt.plot(prev_states_no_gps[X_INDEX], prev_states_no_gps[Y_INDEX], label='Estima
 plt.plot(points[0], points[1], label='GPS Position')
 plt.xlabel('X Position (m)')
 plt.ylabel('Y Position (m)')
-plt.title('No GPS EKF Position')
+plt.title('No GPS UKF Position')
 plt.legend()
 plt.grid(True)
 plt.savefig("nogps.png", dpi=600)
@@ -192,8 +192,8 @@ line2nm, = ax2.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_no_gps_minus3
 
 line3g, = ax3.plot(data[c['Elapsed Time (ms)']]/1000, error_est_with_gps, color = 'b')
 # line3n, = ax3.plot(data[c['Elapsed Time (ms)']]/1000, error_est_no_gps, color = 'r')
-ax0.legend((gps0, line0, line0n), ('GPS', 'EKF with GPS', 'EKF with no GPS'), loc='upper right')
-# ax3.legend((line3g, line3n), ('GPS Error', 'EKF with No GPS Error'), loc='upper right')
+ax0.legend((gps0, line0, line0n), ('GPS', 'UKF with GPS', 'UKF with no GPS'), loc='upper right')
+# ax3.legend((line3g, line3n), ('GPS Error', 'UKF with No GPS Error'), loc='upper right')
 
 ax0.grid(True)
 ax1.grid(True)
@@ -208,7 +208,7 @@ ax3.set_ylabel("Pos Error (m)")
 plt.setp(ax0.get_xticklabels(), visible=False)
 plt.savefig("error.png", dpi=600)
 
-plt.figure(10)
-plt.plot(data[c['Elapsed Time (ms)']]/1000, data[c['Lateral Acceleration (m/s^2)']])
+#plt.figure(10)
+#plt.plot(data[c['Elapsed Time (ms)']]/1000, data[c['Lateral Acceleration (m/s^2)']])
 
 plt.show()

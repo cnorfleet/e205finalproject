@@ -38,7 +38,7 @@ class UKFBaseType:
         self.nDOF = nDOF
         self.nControl = nControl
         self.nMeas = nMeas
-        self.state_est = np.array([[0], [0], [START_ANGLE], [0], [0]])
+        self.state_est = np.array([[0], [0], [wrap_to_pi(START_ANGLE)], [0], [0]])
         self.sigma_est = np.diag([1**2, 1**2, 0.1**2, 1**2, 1**2]) # initially large for arbitrary estimate
         self.scaling_factor = scaling_factor # lambda scaling factor
         
@@ -48,7 +48,9 @@ class UKFBaseType:
         for i in range(nDOF):
             diff = (sqrtm((nDOF + scaling_factor) * sigma_matrix))[i]
             sigmaPts[i+1]      = (state + [[diff[j]] for j in range(nDOF)])
+            sigmaPts[i+1,      THETA_INDEX, 0] = wrap_to_pi(sigmaPts[i+1,      THETA_INDEX, 0])
             sigmaPts[i+1+nDOF] = (state - [[diff[j]] for j in range(nDOF)])
+            sigmaPts[i+1+nDOF, THETA_INDEX, 0] = wrap_to_pi(sigmaPts[i+1+nDOF, THETA_INDEX, 0])
         return sigmaPts
 
     def getWeights(self):
@@ -57,13 +59,6 @@ class UKFBaseType:
         for i in range(2 * self.nDOF):
             weights = weights + [1 / (2 * (self.nDOF + self.scaling_factor))]
         return weights
-
-    def get_G_u_t_manual(self, dt, state_est, u_t):
-        return np.array([[0, 0, 0],
-                         [0, 0, 0],
-                         [0, 0, dt],
-                         [cos(state_est[THETA_INDEX].item()) * dt,      sin(state_est[THETA_INDEX].item()) * dt, 0],
-                         [sin(state_est[THETA_INDEX].item()) * dt, -1 * cos(state_est[THETA_INDEX].item()) * dt, 0]])
 
     def get_G_u_t(self, dt, state_est, u_t):
         manual = self.get_G_u_t_manual(dt, state_est, u_t)
@@ -75,7 +70,9 @@ class UKFBaseType:
         weights = self.getWeights()
         state_pred = np.zeros((self.nDOF,1))
         for i in range(2 * self.nDOF + 1):
+            sigma_points_pred[i][THETA_INDEX, 0] = wrap_to_pi(sigma_points_pred[i][THETA_INDEX, 0])
             state_pred = state_pred + weights[i] * sigma_points_pred[i]
+        state_pred[THETA_INDEX, 0] = wrap_to_pi(state_pred[THETA_INDEX, 0])
             
         # update covariance matrix
         sigma_pred = np.zeros((self.nDOF, self.nDOF))
@@ -103,7 +100,7 @@ class UKFBaseType:
     def correctionStep(self, state_pred, sigma_pred, sigma_points_pred, z_t, Q_t):
         Z_t_pred = self.getPredictedMeasurements(sigma_points_pred)
         weights = self.getWeights()
-        z_t_pred = [[0] for _ in range(self.nMeas)]
+        z_t_pred = np.zeros((self.nMeas, 1))
         for i in range(2*self.nDOF+1):
             z_t_pred = z_t_pred + weights[i] * Z_t_pred[i]
         
@@ -116,6 +113,7 @@ class UKFBaseType:
         sigma_x_z_t = np.zeros((self.nDOF, self.nMeas))
         for i in range(2*self.nDOF+1):
             state_diff = sigma_points_pred[i] - state_pred
+            state_diff[THETA_INDEX, 0] = wrap_to_pi(state_diff[THETA_INDEX, 0])
             meas_diff = Z_t_pred[i] - z_t_pred
             sigma_x_z_t = sigma_x_z_t + weights[i] * (state_diff @ meas_diff.T)
         
@@ -144,33 +142,31 @@ class UKFBaseType:
         pt[YDOT_INDEX, 0]  = sigma_pt[YDOT_INDEX] + dt * (u_t[AF_INPUT_INDEX] * sin(sigma_pt[THETA_INDEX]) - u_t[AR_INPUT_INDEX] * cos(sigma_pt[THETA_INDEX]))
         return pt
 
+    def get_G_u_t_manual(self, dt, state_est, u_t):
+        return np.array([[0, 0, 0],
+                         [0, 0, 0],
+                         [0, 0, dt],
+                         [cos(state_est[THETA_INDEX, 0]) * dt,      sin(state_est[THETA_INDEX, 0]) * dt, 0],
+                         [sin(state_est[THETA_INDEX, 0]) * dt, -1 * cos(state_est[THETA_INDEX, 0]) * dt, 0]])
+    
+    def localize(self, dt, u_t, R_t, z_t, Q_t):
+        # prediction step using sigma points
+        sigma_points = UKFBaseType.getSigmaPoints(self.state_est, self.sigma_est, self.nDOF, self.scaling_factor)
+        sigma_points_model = self.applyMotionModel(dt, sigma_points, u_t)
+        (state_pred, sigma_pred) = self.regroupSigmaPoints(dt, sigma_points_model, u_t, R_t)
+        sigma_points_pred = UKFBaseType.getSigmaPoints(state_pred, sigma_pred, self.nDOF, self.scaling_factor)
+        
+        # correction step
+        outputs = self.correctionStep(state_pred, sigma_pred, sigma_points_pred, z_t, Q_t)
+        
+        return outputs
+
 
 class UKFType(UKFBaseType):
-    def localize(self, dt, u_t, R_t, z_t, Q_t):
-        # prediction step using sigma points
-        sigma_points = UKFBaseType.getSigmaPoints(self.state_est, self.sigma_est, self.nDOF, self.scaling_factor)
-        sigma_points_model = self.applyMotionModel(dt, sigma_points, u_t)
-        (state_pred, sigma_pred) = self.regroupSigmaPoints(dt, sigma_points_model, u_t, R_t)
-        sigma_points_pred = UKFBaseType.getSigmaPoints(state_pred, sigma_pred, self.nDOF, self.scaling_factor)
-        
-        # correction step
-        outputs = self.correctionStep(state_pred, sigma_pred, sigma_points_pred, z_t, Q_t)
-        
-        return outputs
-
+    pass
 
 class UKFWithoutGPSType(UKFBaseType):
-    def localize(self, dt, u_t, R_t, z_t, Q_t):
-        # prediction step using sigma points
-        sigma_points = UKFBaseType.getSigmaPoints(self.state_est, self.sigma_est, self.nDOF, self.scaling_factor)
-        sigma_points_model = self.applyMotionModel(dt, sigma_points, u_t)
-        (state_pred, sigma_pred) = self.regroupSigmaPoints(dt, sigma_points_model, u_t, R_t)
-        sigma_points_pred = UKFBaseType.getSigmaPoints(state_pred, sigma_pred, self.nDOF, self.scaling_factor)
-        
-        # correction step
-        outputs = self.correctionStep(state_pred, sigma_pred, sigma_points_pred, z_t, Q_t)
-        
-        return outputs
+    pass
 
 def diff_function(func, params, param = 0):
     """Takes derivative of Python function func at location params about parameter param.
