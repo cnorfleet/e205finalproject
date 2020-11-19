@@ -84,12 +84,6 @@ class UKFBaseType:
             
         return (state_pred, sigma_pred)
 
-    def get_z_pred(self, sigma_pt):
-        return np.array([[sigma_pt[XDOT_INDEX, 0] * cos(sigma_pt[THETA_INDEX, 0]) +
-                          sigma_pt[YDOT_INDEX, 0] * sin(sigma_pt[THETA_INDEX, 0])],
-                         [sigma_pt[X_INDEX, 0]],
-                         [sigma_pt[Y_INDEX, 0]]])
-
     def getPredictedMeasurements(self, sigma_points):
         Z_t_pred = []
         for sigma_pt in sigma_points:
@@ -163,10 +157,16 @@ class UKFBaseType:
 
 
 class UKFType(UKFBaseType):
-    pass
+    def get_z_pred(self, sigma_pt):
+        return np.array([[sigma_pt[XDOT_INDEX, 0] * cos(sigma_pt[THETA_INDEX, 0]) +
+                          sigma_pt[YDOT_INDEX, 0] * sin(sigma_pt[THETA_INDEX, 0])],
+                         [sigma_pt[X_INDEX, 0]],
+                         [sigma_pt[Y_INDEX, 0]]])
 
 class UKFWithoutGPSType(UKFBaseType):
-    pass
+    def get_z_pred(self, sigma_pt):
+        return np.array([[sigma_pt[XDOT_INDEX, 0] * cos(sigma_pt[THETA_INDEX, 0]) +
+                          sigma_pt[YDOT_INDEX, 0] * sin(sigma_pt[THETA_INDEX, 0])]])
 
 def diff_function(func, params, param = 0):
     """Takes derivative of Python function func at location params about parameter param.

@@ -79,8 +79,8 @@ error_est_no_gps = np.zeros((num_samples))
 # print(', '.join([f'{list(c.keys())[list(c.values()).index(i)]}:{data_vars[i]:.2f}' for i in range(data_vars.size)]))
 
 # instantiate UKFs
-ukfWithGPS = UKFType(N_DOF, N_CONTROL, N_MEAS, 1)
-ukfNoGPS = UKFWithoutGPSType(N_DOF, N_CONTROL, N_MEAS_NO_GPS, 1)
+ukfWithGPS = UKFType(N_DOF, N_CONTROL, N_MEAS)
+ukfNoGPS = UKFWithoutGPSType(N_DOF, N_CONTROL, N_MEAS_NO_GPS)
 
 # run ukf
 for i, measurement in enumerate(data.transpose()):
@@ -100,7 +100,7 @@ for i, measurement in enumerate(data.transpose()):
     
     # measurement input w/o GPS
     z_t_no_gps = z_t[:-2]
-    Q_t_no_gps = Q_t[:-2]
+    Q_t_no_gps = Q_t[:-2,:-2]
     
     # get time delta
     deltaT = measurement[c['Elapsed Time (ms)']]
@@ -110,7 +110,7 @@ for i, measurement in enumerate(data.transpose()):
     
     # call both UKF versions on this data
     ukfWithGPS.localize(deltaT, u_t, R_t, z_t, Q_t)
-    # ukfNoGPS.localize(deltaT, u_t, R_t, z_t_no_gps, Q_t_no_gps)
+    ukfNoGPS.localize(deltaT, u_t, R_t, z_t_no_gps, Q_t_no_gps)
     
     # get state and variance
     gps_state = ukfWithGPS.state_est
@@ -137,7 +137,7 @@ for i, measurement in enumerate(data.transpose()):
         prev_states_no_gps_minus3sd[idx][i] = no_gps_state[idx] - 3 * np.sqrt(no_gps_sigma[idx][idx])
     
     # update state of without gps ukf to match the ukf with gps unless we're in a simulated gps blackout
-    if((int(i/500))%2 == 0):
+    if((int(measurement[c['Elapsed Time (ms)']]/1000/10))%2 == 0):
         ukfNoGPS.state_est = ukfWithGPS.state_est
         ukfNoGPS.sigma_est = ukfWithGPS.sigma_est
 
@@ -191,7 +191,7 @@ line2np, = ax2.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_no_gps_plus3s
 line2nm, = ax2.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_no_gps_minus3sd[THETA_INDEX, :], 'r:')
 
 line3g, = ax3.plot(data[c['Elapsed Time (ms)']]/1000, error_est_with_gps, color = 'b')
-# line3n, = ax3.plot(data[c['Elapsed Time (ms)']]/1000, error_est_no_gps, color = 'r')
+line3n, = ax3.plot(data[c['Elapsed Time (ms)']]/1000, error_est_no_gps, color = 'r')
 ax0.legend((gps0, line0, line0n), ('GPS', 'UKF with GPS', 'UKF with no GPS'), loc='upper right')
 # ax3.legend((line3g, line3n), ('GPS Error', 'UKF with No GPS Error'), loc='upper right')
 
