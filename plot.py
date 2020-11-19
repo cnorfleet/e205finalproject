@@ -255,3 +255,6 @@ plt.savefig("error.png", dpi=600)
 #plt.plot(times, data[c['Longitudinal Acceleration (m/s^2)']])
 
 plt.show()
+
+print("UKF with gps rms error: " + str(np.sqrt(np.average(np.square(error_est_with_gps)))))
+print("UKF no gps rms error:   " + str(np.sqrt(np.average(np.square(error_est_no_gps)))))
