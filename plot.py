@@ -54,7 +54,7 @@ def mphToMps(mph):
     return 0.447 * mph
 
 # load data
-data = np.genfromtxt("Data/telemetry-v1-2020-03-10-13_50_14.csv", delimiter=",")[270:4300].transpose()
+data = np.genfromtxt("Data/telemetry-v1-2020-03-10-13_50_14.csv", delimiter=",")[500:4300].transpose()
 #data = np.genfromtxt("Data/telemetry-v1-2020-03-05-20_00_01.csv", delimiter=",")[100:].transpose()
 origin = [data[c['Latitude (decimal)']][0], data[c['Longitude (decimal)']][0]]
 # print(origin)
