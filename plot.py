@@ -55,7 +55,7 @@ def mphToMps(mph):
 
 # load data
 data = np.genfromtxt("Data/telemetry-v1-2020-03-10-13_50_14.csv", delimiter=",")[270:4300].transpose()
-#data = np.genfromtxt("Data/telemetry-v1-2020-03-05-20_00_01.csv", delimiter=",").transpose()
+#data = np.genfromtxt("Data/telemetry-v1-2020-03-05-20_00_01.csv", delimiter=",")[100:].transpose()
 origin = [data[c['Latitude (decimal)']][0], data[c['Longitude (decimal)']][0]]
 # print(origin)
 (gps_x_all, gps_y_all) = convert_gps_to_xy(data[c['Latitude (decimal)']], data[c['Longitude (decimal)']], origin[0], origin[1])
@@ -104,8 +104,8 @@ for i, measurement in enumerate(data.transpose()):
     v_f = mphToMps(measurement[c['Speed (MPH)']])
     gps_x = gps_x_all[i]
     gps_y = gps_y_all[i]
-    z_t = np.array([[v_f], [0], [gps_x], [gps_y]])
-    Q_t = np.diag([(mphToMps(1))**2, (mphToMps(3))**2, (0.09326)**2, (0.11132)**2])
+    z_t = np.array([[v_f], [gps_x], [gps_y]])
+    Q_t = np.diag([(mphToMps(1))**2, (0.09326)**2, (0.11132)**2])
     
     # measurement input w/o GPS
     z_t_no_gps = z_t[:-2]
