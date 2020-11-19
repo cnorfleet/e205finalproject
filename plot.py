@@ -87,16 +87,16 @@ for i, measurement in enumerate(data.transpose()):
     # calculate control input
     a_f = measurement[c['Longitudinal Acceleration (m/s^2)']] # m/s^2
     a_r = -1 * measurement[c['Lateral Acceleration (m/s^2)']] # m/s^2
-    thetaDot = -1 * measurement[c['Yaw Rate (rad/s)']]        # rad/s
+    thetaDot = measurement[c['Yaw Rate (rad/s)']]        # rad/s
     u_t = np.array([[a_f], [a_r], [thetaDot]])
-    R_t = np.diag([0.023481**2, 0.027114**2, (0.000545586*10)**2])
+    R_t = np.diag([(0.023481)**2, (0.027114)**2, (0.000545586*10)**2])
     
     # calculate measurement input
     v_f = mphToMps(measurement[c['Speed (MPH)']])
     gps_x = gps_x_all[i]
     gps_y = gps_y_all[i]
     z_t = np.array([[v_f], [gps_x], [gps_y]])
-    Q_t = np.diag([(mphToMps(1))**2, 0.09326**2, 0.11132**2])
+    Q_t = np.diag([(mphToMps(10))**2, (0.09326)**2, (0.11132)**2])
     
     # measurement input w/o GPS
     z_t_no_gps = z_t[:-2]
@@ -191,7 +191,7 @@ line2np, = ax2.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_no_gps_plus3s
 line2nm, = ax2.plot(data[c['Elapsed Time (ms)']]/1000, prev_states_no_gps_minus3sd[THETA_INDEX, :], 'r:')
 
 line3g, = ax3.plot(data[c['Elapsed Time (ms)']]/1000, error_est_with_gps, color = 'b')
-line3n, = ax3.plot(data[c['Elapsed Time (ms)']]/1000, error_est_no_gps, color = 'r')
+# line3n, = ax3.plot(data[c['Elapsed Time (ms)']]/1000, error_est_no_gps, color = 'r')
 ax0.legend((gps0, line0, line0n), ('GPS', 'EKF with GPS', 'EKF with no GPS'), loc='upper right')
 # ax3.legend((line3g, line3n), ('GPS Error', 'EKF with No GPS Error'), loc='upper right')
 
@@ -207,5 +207,8 @@ ax2.set_ylabel("Theta (radians)")
 ax3.set_ylabel("Pos Error (m)")
 plt.setp(ax0.get_xticklabels(), visible=False)
 plt.savefig("error.png", dpi=600)
+
+plt.figure(10)
+plt.plot(data[c['Elapsed Time (ms)']]/1000, data[c['Lateral Acceleration (m/s^2)']])
 
 plt.show()
