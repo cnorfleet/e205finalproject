@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from ukf import wrap_to_pi, UKFType, UKFWithoutGPSType, N_DOF, N_CONTROL, \
-                N_MEAS, N_MEAS_NO_GPS, X_INDEX, Y_INDEX, THETA_INDEX, START_ANGLE
+                N_MEAS, N_MEAS_NO_GPS, X_INDEX, Y_INDEX, THETA_INDEX, START_ANGLE, \
+                XDOT_INDEX, YDOT_INDEX
                 
 from sklearn.neural_network import MLPRegressor
 from sklearn.metrics import classification_report,confusion_matrix
@@ -205,7 +206,7 @@ plt.savefig("nogps.png", dpi=600)
 
 
 # show x, y, theta values
-f, (ax0, ax1, ax2, ax3) = plt.subplots(4, 1, sharex = True)
+f, (ax0, ax1, ax2, ax3, ax4, ax5, ax6, ax7) = plt.subplots(8, 1, sharex = True)
 gps0,    = ax0.plot(times, gps_x_all, color='g')
 line0,   = ax0.plot(times, prev_states_gps[X_INDEX, :], 'b-')
 line0p,  = ax0.plot(times, prev_states_gps_plus3sd[X_INDEX, :], 'b:')
@@ -237,12 +238,28 @@ line3n, = ax3.plot(times, error_est_no_gps, color = 'r')
 ax0.legend((gps0, line0, line0n), ('GPS', 'UKF with GPS', 'UKF with no GPS'), loc='upper right')
 # ax3.legend((line3g, line3n), ('GPS Error', 'UKF with No GPS Error'), loc='upper right')
 
+ax4.plot(times, prev_states_gps[XDOT_INDEX, :], 'b-')
+ax5.plot(times, prev_states_gps[YDOT_INDEX, :], 'b-')
+ax4.set_ylabel("X Vel (m/s)")
+ax5.set_ylabel("Y Vel (m/s)")
+ax4.grid(True)
+ax5.grid(True)
+
+ax6.plot(times, prev_states_gps[XDOT_INDEX, :] *      np.cos(prev_states_gps[THETA_INDEX, :]) +
+                prev_states_gps[YDOT_INDEX, :] *      np.sin(prev_states_gps[THETA_INDEX, :]), 'b-')
+ax7.plot(times, prev_states_gps[XDOT_INDEX, :] *      np.sin(prev_states_gps[THETA_INDEX, :]) +
+                prev_states_gps[YDOT_INDEX, :] * -1 * np.cos(prev_states_gps[THETA_INDEX, :]), 'b-')
+ax6.set_ylabel("F Vel (m/s)")
+ax7.set_ylabel("R Vel (m/s)")
+ax6.grid(True)
+ax7.grid(True)
+
 ax0.grid(True)
 ax1.grid(True)
 ax2.grid(True)
 ax3.grid(True)
 
-ax2.set_xlabel("Time (seconds)")
+ax7.set_xlabel("Time (seconds)")
 ax0.set_ylabel("X (meters)")
 ax1.set_ylabel("Y (meters)")
 ax2.set_ylabel("Theta (radians)")

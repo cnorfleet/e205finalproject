@@ -39,7 +39,7 @@ class UKFBaseType:
         self.nControl = nControl
         self.nMeas = nMeas
         self.state_est = np.array([[0], [0], [wrap_to_pi(START_ANGLE)], [0], [0]])
-        self.sigma_est = np.diag([1**2, 1**2, 0.2**2, 1**2, 1**2]) # initially large for arbitrary estimate
+        self.sigma_est = np.diag([0.1**2, 0.1**2, 0.3**2, 10**2, 10**2]) # initially large for arbitrary estimate
         self.scaling_factor = scaling_factor # lambda scaling factor
         
     def getSigmaPoints(state, sigma_matrix, nDOF, scaling_factor):
