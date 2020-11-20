@@ -5,7 +5,7 @@ from ukf import wrap_to_pi, UKFType, UKFWithoutGPSType, N_DOF, N_CONTROL, \
                 N_MEAS, N_MEAS_NO_GPS, X_INDEX, Y_INDEX, THETA_INDEX, START_ANGLE, \
                 XDOT_INDEX, YDOT_INDEX, USING_DATASET
                 
-from sklearn.neural_network import MLPRegressor
+from sklearn.svm import SVR
 
 # data column lookup
 c = {key: i for i, key in enumerate(['Lap',
@@ -88,9 +88,9 @@ N_NET = 200
 trainingInputs  = [[0, 0, 0] for _ in range(N_NET)]
 trainingOutputs1 = [0 for _ in range(N_NET)]
 trainingOutputs2 = [0 for _ in range(N_NET)]
-LAYER_SIZES = (3,)
-neural_net1 = MLPRegressor(hidden_layer_sizes=LAYER_SIZES)
-neural_net2 = MLPRegressor(hidden_layer_sizes=LAYER_SIZES)
+LAYER_SIZES = (9,)
+neural_net1 = SVR() #MLPRegressor(hidden_layer_sizes=LAYER_SIZES)
+neural_net2 = SVR() #MLPRegressor(hidden_layer_sizes=LAYER_SIZES)
 neural_net_trained = False
 
 neuralNetT = []
