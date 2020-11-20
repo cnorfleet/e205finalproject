@@ -57,7 +57,7 @@ def mphToMps(mph):
 if(USING_DATASET == 1):
     data = np.genfromtxt("Data/telemetry-v1-2020-03-10-13_50_14.csv", delimiter=",")[500:4300].transpose()
 elif(USING_DATASET == 2):
-    data = np.genfromtxt("Data/telemetry-v1-2020-03-05-20_00_01.csv", delimiter=",")[100:].transpose()
+    data = np.genfromtxt("Data/telemetry-v1-2020-03-05-20_00_01.csv", delimiter=",")[500:].transpose()
 origin = [data[c['Latitude (decimal)']][0], data[c['Longitude (decimal)']][0]]
 # print(origin)
 (gps_x_all, gps_y_all) = convert_gps_to_xy(data[c['Latitude (decimal)']], data[c['Longitude (decimal)']], origin[0], origin[1])
@@ -179,13 +179,20 @@ for i, measurement in enumerate(data.transpose()):
             print("")
             
             neural_net_trained = True
-        
-        netInput = [[ a_r, thetaDot, deltaT ]]
-        netX = (neural_net1.predict(netInput))[0]
-        netY = (neural_net2.predict(netInput))[0]
-        
-        neuralNetUkf.state_est[X_INDEX, 0] = neuralNetUkf.state_est[X_INDEX, 0] + netX
-        neuralNetUkf.state_est[Y_INDEX, 0] = neuralNetUkf.state_est[Y_INDEX, 0] + netY
+            
+        if((int(measurement[c['Elapsed Time (ms)']]/1000/10)) < 2):
+            neuralNetUkf.state_est = ukfWithGPS.state_est
+            neuralNetUkf.sigma_est = ukfWithGPS.sigma_est
+            
+            ukfNoGPS.state_est = ukfWithGPS.state_est
+            ukfNoGPS.sigma_est = ukfWithGPS.sigma_est
+        else:
+            netInput = [[ a_r, thetaDot, deltaT ]]
+            netX = (neural_net1.predict(netInput))[0]
+            netY = (neural_net2.predict(netInput))[0]
+            
+            neuralNetUkf.state_est[X_INDEX, 0] = neuralNetUkf.state_est[X_INDEX, 0] + netX
+            neuralNetUkf.state_est[Y_INDEX, 0] = neuralNetUkf.state_est[Y_INDEX, 0] + netY
     
     neuralNetT += [measurement[c['Elapsed Time (ms)']]/1000]
     neuralNetX += [neuralNetUkf.state_est[X_INDEX, 0]]
