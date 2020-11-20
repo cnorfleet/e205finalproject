@@ -6,7 +6,6 @@ from ukf import wrap_to_pi, UKFType, UKFWithoutGPSType, N_DOF, N_CONTROL, \
                 XDOT_INDEX, YDOT_INDEX, USING_DATASET
                 
 from sklearn.neural_network import MLPRegressor
-from sklearn.metrics import classification_report,confusion_matrix
 
 # data column lookup
 c = {key: i for i, key in enumerate(['Lap',
@@ -85,11 +84,13 @@ ukfNoGPS = UKFWithoutGPSType(N_DOF, N_CONTROL, N_MEAS_NO_GPS)
 neuralNetUkf = UKFWithoutGPSType(N_DOF, N_CONTROL, N_MEAS_NO_GPS)
 
 # neural net
-trainingInputs  = [[0, 0, 0, 0] for _ in range(500)]
-trainingOutputs1 = [0 for _ in range(500)]
-trainingOutputs2 = [0 for _ in range(500)]
-neural_net1 = MLPRegressor(hidden_layer_sizes=(9,))
-neural_net2 = MLPRegressor(hidden_layer_sizes=(9,))
+N_NET = 200
+trainingInputs  = [[0, 0, 0] for _ in range(N_NET)]
+trainingOutputs1 = [0 for _ in range(N_NET)]
+trainingOutputs2 = [0 for _ in range(N_NET)]
+LAYER_SIZES = (3,)
+neural_net1 = MLPRegressor(hidden_layer_sizes=LAYER_SIZES)
+neural_net2 = MLPRegressor(hidden_layer_sizes=LAYER_SIZES)
 neural_net_trained = False
 
 neuralNetT = []
@@ -156,7 +157,7 @@ for i, measurement in enumerate(data.transpose()):
         x_corr = ukfWithGPS.state_est[X_INDEX, 0] - ukfNoGPS.state_est[X_INDEX, 0]
         y_corr = ukfWithGPS.state_est[Y_INDEX, 0] - ukfNoGPS.state_est[Y_INDEX, 0]
         
-        trainingInputs  = trainingInputs[1:]  + [[ a_f, a_r, thetaDot, deltaT ]]
+        trainingInputs  = trainingInputs[1:]  + [[ a_r, thetaDot, deltaT ]]
         trainingOutputs1 = trainingOutputs1[1:] + [ x_corr ]
         trainingOutputs2 = trainingOutputs2[1:] + [ y_corr ]
         neural_net_trained = False
@@ -179,7 +180,7 @@ for i, measurement in enumerate(data.transpose()):
             
             neural_net_trained = True
         
-        netInput = [[ a_f, a_r, thetaDot, deltaT ]]
+        netInput = [[ a_r, thetaDot, deltaT ]]
         netX = (neural_net1.predict(netInput))[0]
         netY = (neural_net2.predict(netInput))[0]
         
