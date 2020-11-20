@@ -85,11 +85,11 @@ ukfNoGPS = UKFWithoutGPSType(N_DOF, N_CONTROL, N_MEAS_NO_GPS)
 neuralNetUkf = UKFWithoutGPSType(N_DOF, N_CONTROL, N_MEAS_NO_GPS)
 
 # neural net
-trainingInputs  = [[0, 0, 0] for _ in range(200)]
-trainingOutputs1 = [0 for _ in range(200)]
-trainingOutputs2 = [0 for _ in range(200)]
-neural_net1 = MLPRegressor(hidden_layer_sizes=(2,2))
-neural_net2 = MLPRegressor(hidden_layer_sizes=(2,2))
+trainingInputs  = [[0, 0, 0, 0] for _ in range(500)]
+trainingOutputs1 = [0 for _ in range(500)]
+trainingOutputs2 = [0 for _ in range(500)]
+neural_net1 = MLPRegressor(hidden_layer_sizes=(9,))
+neural_net2 = MLPRegressor(hidden_layer_sizes=(9,))
 neural_net_trained = False
 
 neuralNetT = []
@@ -156,7 +156,7 @@ for i, measurement in enumerate(data.transpose()):
         x_corr = ukfWithGPS.state_est[X_INDEX, 0] - ukfNoGPS.state_est[X_INDEX, 0]
         y_corr = ukfWithGPS.state_est[Y_INDEX, 0] - ukfNoGPS.state_est[Y_INDEX, 0]
         
-        trainingInputs  = trainingInputs[1:]  + [[ a_f, a_r, thetaDot ]]
+        trainingInputs  = trainingInputs[1:]  + [[ a_f, a_r, thetaDot, deltaT ]]
         trainingOutputs1 = trainingOutputs1[1:] + [ x_corr ]
         trainingOutputs2 = trainingOutputs2[1:] + [ y_corr ]
         neural_net_trained = False
@@ -179,7 +179,7 @@ for i, measurement in enumerate(data.transpose()):
             
             neural_net_trained = True
         
-        netInput = [[ a_f, a_r, thetaDot ]]
+        netInput = [[ a_f, a_r, thetaDot, deltaT ]]
         netX = (neural_net1.predict(netInput))[0]
         netY = (neural_net2.predict(netInput))[0]
         
@@ -227,7 +227,10 @@ plt.savefig("neuralnet.png", dpi=600)
 
 
 # show x, y, theta values
-f, (ax0, ax1, ax2, ax3, ax4, ax5, ax6, ax7) = plt.subplots(8, 1, sharex = True)
+if(False):
+    f, (ax0, ax1, ax2, ax3, ax4, ax5, ax6, ax7) = plt.subplots(8, 1, sharex = True)
+else:
+    f, (ax0, ax1, ax2, ax3) = plt.subplots(4, 1, sharex = True)
 gps0,    = ax0.plot(times, gps_x_all, color='g')
 line0,   = ax0.plot(times, prev_states_gps[X_INDEX, :], 'b-')
 line0p,  = ax0.plot(times, prev_states_gps_plus3sd[X_INDEX, :], 'b:')
@@ -260,28 +263,31 @@ line3r, = ax3.plot(times, error_neural_net, color = 'k')
 ax0.legend((gps0, line0, line0n, line0r), ('GPS', 'UKF with GPS', 'UKF with no GPS', 'Neural Net Correction'), loc='upper right')
 # ax3.legend((line3g, line3n), ('GPS Error', 'UKF with No GPS Error'), loc='upper right')
 
-ax4.plot(times, prev_states_gps[XDOT_INDEX, :], 'b-')
-ax5.plot(times, prev_states_gps[YDOT_INDEX, :], 'b-')
-ax4.set_ylabel("X Vel (m/s)")
-ax5.set_ylabel("Y Vel (m/s)")
-ax4.grid(True)
-ax5.grid(True)
-
-ax6.plot(times, prev_states_gps[XDOT_INDEX, :] *      np.cos(prev_states_gps[THETA_INDEX, :]) +
-                prev_states_gps[YDOT_INDEX, :] *      np.sin(prev_states_gps[THETA_INDEX, :]), 'b-')
-ax7.plot(times, prev_states_gps[XDOT_INDEX, :] *      np.sin(prev_states_gps[THETA_INDEX, :]) +
-                prev_states_gps[YDOT_INDEX, :] * -1 * np.cos(prev_states_gps[THETA_INDEX, :]), 'b-')
-ax6.set_ylabel("F Vel (m/s)")
-ax7.set_ylabel("R Vel (m/s)")
-ax6.grid(True)
-ax7.grid(True)
+if(False):
+    ax4.plot(times, prev_states_gps[XDOT_INDEX, :], 'b-')
+    ax5.plot(times, prev_states_gps[YDOT_INDEX, :], 'b-')
+    ax4.set_ylabel("X Vel (m/s)")
+    ax5.set_ylabel("Y Vel (m/s)")
+    ax4.grid(True)
+    ax5.grid(True)
+    
+    ax6.plot(times, prev_states_gps[XDOT_INDEX, :] *      np.cos(prev_states_gps[THETA_INDEX, :]) +
+                    prev_states_gps[YDOT_INDEX, :] *      np.sin(prev_states_gps[THETA_INDEX, :]), 'b-')
+    ax7.plot(times, prev_states_gps[XDOT_INDEX, :] *      np.sin(prev_states_gps[THETA_INDEX, :]) +
+                    prev_states_gps[YDOT_INDEX, :] * -1 * np.cos(prev_states_gps[THETA_INDEX, :]), 'b-')
+    ax6.set_ylabel("F Vel (m/s)")
+    ax7.set_ylabel("R Vel (m/s)")
+    ax6.grid(True)
+    ax7.grid(True)
+    ax7.set_xlabel("Time (seconds)")
+else:
+    ax3.set_xlabel("Time (seconds)")
 
 ax0.grid(True)
 ax1.grid(True)
 ax2.grid(True)
 ax3.grid(True)
 
-ax7.set_xlabel("Time (seconds)")
 ax0.set_ylabel("X (meters)")
 ax1.set_ylabel("Y (meters)")
 ax2.set_ylabel("Theta (radians)")
