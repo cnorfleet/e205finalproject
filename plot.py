@@ -3,7 +3,7 @@ import numpy as np
 
 from ukf import wrap_to_pi, UKFType, UKFWithoutGPSType, N_DOF, N_CONTROL, \
                 N_MEAS, N_MEAS_NO_GPS, X_INDEX, Y_INDEX, THETA_INDEX, START_ANGLE, \
-                XDOT_INDEX, YDOT_INDEX
+                XDOT_INDEX, YDOT_INDEX, USING_DATASET
                 
 from sklearn.neural_network import MLPRegressor
 from sklearn.metrics import classification_report,confusion_matrix
@@ -55,8 +55,10 @@ def mphToMps(mph):
     return 0.447 * mph
 
 # load data
-data = np.genfromtxt("Data/telemetry-v1-2020-03-10-13_50_14.csv", delimiter=",")[500:4300].transpose()
-#data = np.genfromtxt("Data/telemetry-v1-2020-03-05-20_00_01.csv", delimiter=",")[100:].transpose()
+if(USING_DATASET == 1):
+    data = np.genfromtxt("Data/telemetry-v1-2020-03-10-13_50_14.csv", delimiter=",")[500:4300].transpose()
+elif(USING_DATASET == 2):
+    data = np.genfromtxt("Data/telemetry-v1-2020-03-05-20_00_01.csv", delimiter=",")[100:].transpose()
 origin = [data[c['Latitude (decimal)']][0], data[c['Longitude (decimal)']][0]]
 # print(origin)
 (gps_x_all, gps_y_all) = convert_gps_to_xy(data[c['Latitude (decimal)']], data[c['Longitude (decimal)']], origin[0], origin[1])
@@ -82,11 +84,11 @@ ukfNoGPS = UKFWithoutGPSType(N_DOF, N_CONTROL, N_MEAS_NO_GPS)
 neuralNetUkf = UKFWithoutGPSType(N_DOF, N_CONTROL, N_MEAS_NO_GPS)
 
 # neural net
-trainingInputs  = [[0, 0, 0] for _ in range(100)]
-trainingOutputs1 = [0 for _ in range(100)]
-trainingOutputs2 = [0 for _ in range(100)]
-neural_net1 = MLPRegressor(hidden_layer_sizes=(3,3,3))
-neural_net2 = MLPRegressor(hidden_layer_sizes=(3,3,3))
+trainingInputs  = [[0, 0, 0] for _ in range(500)]
+trainingOutputs1 = [0 for _ in range(500)]
+trainingOutputs2 = [0 for _ in range(500)]
+neural_net1 = MLPRegressor(hidden_layer_sizes=(3,3))
+neural_net2 = MLPRegressor(hidden_layer_sizes=(3,3))
 neural_net_trained = False
 
 neuralNetT = []
@@ -149,7 +151,7 @@ for i, measurement in enumerate(data.transpose()):
         prev_states_no_gps_minus3sd[idx][i] = no_gps_state[idx] - 3 * np.sqrt(no_gps_sigma[idx][idx])
     
     # update state of without gps ukf to match the ukf with gps unless we're in a simulated gps blackout
-    if((int(measurement[c['Elapsed Time (ms)']]/1000/10))%2 == 0):
+    if((int(measurement[c['Elapsed Time (ms)']]/1000/20))%2 == 0):
         x_corr = ukfWithGPS.state_est[X_INDEX, 0] - ukfNoGPS.state_est[X_INDEX, 0]
         y_corr = ukfWithGPS.state_est[Y_INDEX, 0] - ukfNoGPS.state_est[Y_INDEX, 0]
         

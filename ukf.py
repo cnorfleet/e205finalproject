@@ -3,7 +3,12 @@ from numpy import sin, cos
 import math
 from scipy.linalg import sqrtm
 
-START_ANGLE = 2*np.pi/3 #-2*np.pi/3
+USING_DATASET = 1
+
+if(USING_DATASET == 1):
+    START_ANGLE = 2*np.pi/3
+elif(USING_DATASET == 2):
+    START_ANGLE = -2*np.pi/3
 
 X_INDEX = 0
 Y_INDEX = 1
@@ -38,8 +43,12 @@ class UKFBaseType:
         self.nDOF = nDOF
         self.nControl = nControl
         self.nMeas = nMeas
-        self.state_est = np.array([[0], [0], [wrap_to_pi(START_ANGLE)], [0], [0]])
-        self.sigma_est = np.diag([0.1**2, 0.1**2, 0.3**2, 10**2, 10**2]) # initially large for arbitrary estimate
+        if(USING_DATASET == 1):
+            self.state_est = np.array([[0], [0], [wrap_to_pi(START_ANGLE)], [0], [0]])
+            self.sigma_est = np.diag([0.1**2, 0.1**2, 0.3**2, 10**2, 10**2]) # initially large for arbitrary estimate
+        elif(USING_DATASET == 2):
+            self.state_est = np.array([[0], [0], [wrap_to_pi(START_ANGLE)], [0], [0]])
+            self.sigma_est = np.diag([0.1**2, 0.1**2, 0.3**2, 10**2, 10**2]) # initially large for arbitrary estimate
         self.scaling_factor = scaling_factor # lambda scaling factor
         
     def getSigmaPoints(state, sigma_matrix, nDOF, scaling_factor):
