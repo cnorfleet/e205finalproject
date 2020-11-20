@@ -79,6 +79,7 @@ error_est_no_gps = np.zeros((num_samples))
 # instantiate UKFs
 ukfWithGPS = UKFType(N_DOF, N_CONTROL, N_MEAS)
 ukfNoGPS = UKFWithoutGPSType(N_DOF, N_CONTROL, N_MEAS_NO_GPS)
+neuralNetUkf = UKFWithoutGPSType(N_DOF, N_CONTROL, N_MEAS_NO_GPS)
 
 # neural net
 trainingInputs  = [[0, 0, 0] for _ in range(100)]
@@ -121,6 +122,7 @@ for i, measurement in enumerate(data.transpose()):
     # call both UKF versions on this data
     ukfWithGPS.localize(deltaT, u_t, R_t, z_t, Q_t)
     ukfNoGPS.localize(deltaT, u_t, R_t, z_t_no_gps, Q_t_no_gps)
+    neuralNetUkf.localize(deltaT, u_t, R_t, z_t_no_gps, Q_t_no_gps)
     
     # get state and variance
     gps_state = ukfWithGPS.state_est
@@ -148,37 +150,40 @@ for i, measurement in enumerate(data.transpose()):
     
     # update state of without gps ukf to match the ukf with gps unless we're in a simulated gps blackout
     if((int(measurement[c['Elapsed Time (ms)']]/1000/10))%2 == 0):
-        # x_corr = ukfWithGPS.state_est[X_INDEX, 0] - ukfNoGPS.state_est[X_INDEX, 0]
-        # y_corr = ukfWithGPS.state_est[Y_INDEX, 0] - ukfNoGPS.state_est[Y_INDEX, 0]
+        x_corr = ukfWithGPS.state_est[X_INDEX, 0] - ukfNoGPS.state_est[X_INDEX, 0]
+        y_corr = ukfWithGPS.state_est[Y_INDEX, 0] - ukfNoGPS.state_est[Y_INDEX, 0]
         
-        # trainingInputs  = trainingInputs[1:]  + [[ a_f, a_r, thetaDot ]]
-        # trainingOutputs1 = trainingOutputs1[1:] + [ x_corr ]
-        # trainingOutputs2 = trainingOutputs2[1:] + [ y_corr ]
-        # neural_net_trained = False
+        trainingInputs  = trainingInputs[1:]  + [[ a_f, a_r, thetaDot ]]
+        trainingOutputs1 = trainingOutputs1[1:] + [ x_corr ]
+        trainingOutputs2 = trainingOutputs2[1:] + [ y_corr ]
+        neural_net_trained = False
+        
+        neuralNetUkf.state_est = ukfWithGPS.state_est
+        neuralNetUkf.sigma_est = ukfWithGPS.sigma_est
         
         ukfNoGPS.state_est = ukfWithGPS.state_est
         ukfNoGPS.sigma_est = ukfWithGPS.sigma_est
-    # else:
-    #     if(not neural_net_trained):
-    #         neural_net1.fit(trainingInputs, trainingOutputs1)
-    #         neural_net2.fit(trainingInputs, trainingOutputs2)
+    else:
+        if(not neural_net_trained):
+            neural_net1.fit(trainingInputs, trainingOutputs1)
+            neural_net2.fit(trainingInputs, trainingOutputs2)
             
-    #         predictions1 = neural_net1.predict(trainingInputs)
-    #         predictions2 = neural_net2.predict(trainingInputs)
-    #         print(neural_net1.score(trainingInputs, trainingOutputs1))
+            predictions1 = neural_net1.predict(trainingInputs)
+            predictions2 = neural_net2.predict(trainingInputs)
+            print(neural_net1.score(trainingInputs, trainingOutputs1))
             
-    #         neural_net_trained = True
+            neural_net_trained = True
         
-    #     netInput = [[ a_f, a_r, thetaDot ]]
-    #     netX = (neural_net1.predict(netInput))[0]
-    #     netY = (neural_net2.predict(netInput))[0]
+        netInput = [[ a_f, a_r, thetaDot ]]
+        netX = (neural_net1.predict(netInput))[0]
+        netY = (neural_net2.predict(netInput))[0]
         
-    #     ukfNoGPS.state_est[X_INDEX, 0] = ukfNoGPS.state_est[X_INDEX, 0] + netX
-    #     ukfNoGPS.state_est[Y_INDEX, 0] = ukfNoGPS.state_est[Y_INDEX, 0] + netY
+        neuralNetUkf.state_est[X_INDEX, 0] = neuralNetUkf.state_est[X_INDEX, 0] + netX
+        neuralNetUkf.state_est[Y_INDEX, 0] = neuralNetUkf.state_est[Y_INDEX, 0] + netY
         
-    #     neuralNetT += [measurement[c['Elapsed Time (ms)']]/1000]
-    #     neuralNetX += [ukfNoGPS.state_est[X_INDEX, 0]]
-    #     neuralNetY += [ukfNoGPS.state_est[Y_INDEX, 0]]
+        neuralNetT += [measurement[c['Elapsed Time (ms)']]/1000]
+        neuralNetX += [neuralNetUkf.state_est[X_INDEX, 0]]
+        neuralNetY += [neuralNetUkf.state_est[Y_INDEX, 0]]
 
 # Plot data
 times = data[c['Elapsed Time (ms)']]/1000
